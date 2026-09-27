@@ -62,7 +62,8 @@ export async function parseMalExport(file: File): Promise<MalEntry[]> {
       : await file.text();
     const document = new DOMParser().parseFromString(xml, "application/xml");
     if (document.querySelector("parsererror")) throw new Error("XML inválido");
-    const read = (element: Element, tag: string) => element.getElementsByTagName(tag)[0]?.textContent?.trim() ?? "";
+    const read = (element: Element, tag: string) =>
+      element.getElementsByTagName(tag)[0]?.textContent?.trim() ?? "";
     const entries = Array.from(document.getElementsByTagName("anime")).map((element) => {
       const malId = Number(read(element, "series_animedb_id"));
       const episodes = Number(read(element, "series_episodes"));
@@ -76,7 +77,10 @@ export async function parseMalExport(file: File): Promise<MalEntry[]> {
         score: Number.isFinite(score) && score > 0 ? score : 0,
       } satisfies MalEntry;
     });
-    if (entries.length === 0 || entries.some((entry) => !Number.isInteger(entry.malId) || entry.malId <= 0)) {
+    if (
+      entries.length === 0 ||
+      entries.some((entry) => !Number.isInteger(entry.malId) || entry.malId <= 0)
+    ) {
       throw new Error("Arquivo sem animes válidos");
     }
     return entries;
@@ -99,7 +103,10 @@ function seasonFrom(entry: MalEntry, detail?: ChainSeason): Season {
   };
 }
 
-function aggregate(entries: MalEntry[], seasons: Season[]): { watched: boolean; tier: Tier | null } {
+function aggregate(
+  entries: MalEntry[],
+  seasons: Season[],
+): { watched: boolean; tier: Tier | null } {
   const counted = entries.filter((entry) => {
     const season = seasons.find((s) => s.malId === entry.malId);
     return season ? !isExcludedFromAverage(season) : true;
@@ -108,7 +115,10 @@ function aggregate(entries: MalEntry[], seasons: Season[]): { watched: boolean; 
   const scores = counted.map((entry) => entry.score).filter((score) => score > 0);
   return {
     watched: relevant.length > 0 && relevant.every((entry) => entry.status === "completed"),
-    tier: scores.length > 0 ? tierFromAverage(scores.reduce((sum, score) => sum + score, 0) / scores.length) : null,
+    tier:
+      scores.length > 0
+        ? tierFromAverage(scores.reduce((sum, score) => sum + score, 0) / scores.length)
+        : null,
   };
 }
 
@@ -138,7 +148,8 @@ export async function runMalImport(
   const createdById = new Map<number, Anime>();
   const entriesByAnime = new Map<string, MalEntry[]>();
   let done = 0;
-  const report = (currentName: string) => onProgress?.({ done, total: entries.length, currentName });
+  const report = (currentName: string) =>
+    onProgress?.({ done, total: entries.length, currentName });
   report("");
 
   for (let index = 0; index < entries.length; index++) {
@@ -173,7 +184,10 @@ export async function runMalImport(
       }
       const group = members.map((member) => member.entry);
       const label = entry.title;
-      if (chain.some((detail) => existing.has(detail.malId)) || group.some((candidate) => existing.has(candidate.malId))) {
+      if (
+        chain.some((detail) => existing.has(detail.malId)) ||
+        group.some((candidate) => existing.has(candidate.malId))
+      ) {
         summary.linkedToExisting.push(label);
       } else {
         const hasCompleted = group.some((candidate) => candidate.status === "completed");
@@ -186,15 +200,21 @@ export async function runMalImport(
         });
         const details = new Map(chain.map((detail) => [detail.malId, detail]));
         const ordered = [
-          ...chain.flatMap((detail) => kept.filter((candidate) => candidate.malId === detail.malId)),
+          ...chain.flatMap((detail) =>
+            kept.filter((candidate) => candidate.malId === detail.malId),
+          ),
           ...kept.filter((candidate) => !details.has(candidate.malId)),
         ];
-        const overlap = chain.map((detail) => createdById.get(detail.malId)).find((anime) => anime != null);
-        const previous = overlap ? entriesByAnime.get(overlap.id) ?? [] : [];
+        const overlap = chain
+          .map((detail) => createdById.get(detail.malId))
+          .find((anime) => anime != null);
+        const previous = overlap ? (entriesByAnime.get(overlap.id) ?? []) : [];
         const added = ordered.filter(
           (candidate) => !overlap?.seasons.some((season) => season.malId === candidate.malId),
         );
-        const newSeasons = added.map((candidate) => seasonFrom(candidate, details.get(candidate.malId)));
+        const newSeasons = added.map((candidate) =>
+          seasonFrom(candidate, details.get(candidate.malId)),
+        );
         const seasons = overlap ? [...overlap.seasons, ...newSeasons] : newSeasons;
         const combined = [...previous, ...added];
         const { watched, tier } = aggregate(combined, seasons);
@@ -204,7 +224,8 @@ export async function runMalImport(
           await updateTier(overlap.id, tier);
           await setWatched(overlap.id, watched);
           const updated = { ...overlap, seasons, tier, watched };
-          for (const season of seasons) if (season.malId != null) createdById.set(season.malId, updated);
+          for (const season of seasons)
+            if (season.malId != null) createdById.set(season.malId, updated);
           entriesByAnime.set(updated.id, combined);
           onUpdated?.(updated);
         } else {
@@ -222,7 +243,8 @@ export async function runMalImport(
             tier,
           });
           summary.created++;
-          for (const season of seasons) if (season.malId != null) createdById.set(season.malId, created);
+          for (const season of seasons)
+            if (season.malId != null) createdById.set(season.malId, created);
           entriesByAnime.set(created.id, combined);
           onCreated?.(created);
         }
