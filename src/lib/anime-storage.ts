@@ -254,6 +254,8 @@ export type CreateAnimeInput = {
   malScore?: number | null;
   seasons?: Season[];
   genres?: string[] | null;
+  tier?: Tier | null;
+  watched?: boolean;
 };
 
 export async function createAnime(input: CreateAnimeInput): Promise<Anime> {
@@ -268,10 +270,11 @@ export async function createAnime(input: CreateAnimeInput): Promise<Anime> {
       cover: input.cover ?? null,
       seasons: input.seasons ?? [],
       upcoming: null,
+      watched: input.watched ?? false,
       mal_id: input.malId ?? null,
       image_url: input.imageUrl ?? null,
       mal_score: input.malScore ?? null,
-      tier: null,
+      tier: input.tier ?? null,
       tier_position: null,
       last_checked_at: null,
       genres: input.genres ?? null,
