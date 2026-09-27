@@ -1,1 +1,2 @@
 Keep the add-anime dialog's search, chain, validation, and cancellation state inside `AddAnimeDialog`; the authenticated route owns persistence, reveal, and success/error feedback so dialog state does not leak into the page.
+Keep MAL export parsing and franchise import orchestration in `src/lib/mal-import.ts`; it runs in the browser so XML/gzip parsing uses browser APIs and each completed franchise persists immediately.
