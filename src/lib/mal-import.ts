@@ -173,7 +173,7 @@ export async function runMalImport(
       }
       const group = members.map((member) => member.entry);
       const label = entry.title;
-      if (group.some((candidate) => existing.has(candidate.malId))) {
+      if (chain.some((detail) => existing.has(detail.malId)) || group.some((candidate) => existing.has(candidate.malId))) {
         summary.linkedToExisting.push(label);
       } else {
         const hasCompleted = group.some((candidate) => candidate.status === "completed");
@@ -201,9 +201,7 @@ export async function runMalImport(
         if (signal?.aborted) break;
         if (overlap) {
           await updateSeasons(overlap.id, seasons);
-          if (signal?.aborted) break;
           await updateTier(overlap.id, tier);
-          if (signal?.aborted) break;
           await setWatched(overlap.id, watched);
           const updated = { ...overlap, seasons, tier, watched };
           for (const season of seasons) if (season.malId != null) createdById.set(season.malId, updated);
