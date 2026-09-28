@@ -136,7 +136,9 @@ export function MalImportDialog({
         description: "O que já foi importado ficou salvo.",
       });
     } else {
-      toast.success(`${result.created} ${result.created === 1 ? "anime criado" : "animes criados"}`);
+      toast.success(
+        `${result.created} ${result.created === 1 ? "anime criado" : "animes criados"}`,
+      );
     }
   }
 
@@ -211,7 +213,10 @@ export function MalImportDialog({
           <div className="grid gap-4 py-1">
             <div className="divide-y divide-border/60 rounded-md border border-border/60">
               {STATUS_LABELS.map(({ status, label }) => (
-                <div key={status} className="flex items-center justify-between gap-4 px-3 py-2 text-sm">
+                <div
+                  key={status}
+                  className="flex items-center justify-between gap-4 px-3 py-2 text-sm"
+                >
                   <span className="text-muted-foreground">{label}</span>
                   <span className="font-medium tabular-nums">{statusCounts.get(status) ?? 0}</span>
                 </div>
@@ -302,7 +307,10 @@ function SummaryList({ label, names }: { label: string; names: string[] }) {
         <span>
           {label} <span className="text-muted-foreground">({names.length})</span>
         </span>
-        <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+        <ChevronDown
+          className="h-4 w-4 transition-transform group-open:rotate-180"
+          aria-hidden="true"
+        />
       </summary>
       {names.length > 0 && (
         <ul className="max-h-40 space-y-1 overflow-y-auto border-t border-border/60 px-3 py-2 text-sm text-muted-foreground">
