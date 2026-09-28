@@ -9,6 +9,10 @@
 - [x] Integrar o diálogo à rota mantendo persistência, fechamento e rollback.
 - [x] Limpar somente imports órfãos da rota.
 - [x] Validar lint, tipos, testes e o fluxo do diálogo.
+- [x] Adicionar a importação do MyAnimeList ao menu do perfil.
+- [x] Criar o fluxo de arquivo, prévia, progresso cancelável e resumo.
+- [x] Integrar criações e atualizações da importação à lista.
+- [ ] Validar lint, tipos, testes e o fluxo da importação.
 - [x] Ler exportação XML e XML.gz do MAL, incluindo status e notas.
 - [x] Agrupar, reconciliar e persistir franquias com progresso, cancelamento e resumo.
 - [x] Validar a importação com testes, lint e tipos, sem criar interface.

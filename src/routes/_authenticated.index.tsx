@@ -94,6 +94,7 @@ import { useAuth } from "@/auth/AuthProvider";
 import { TierPicker, tierColor, tierBg } from "@/components/TierPicker";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { StatsDialog } from "@/components/StatsDialog";
+import { MalImportDialog } from "@/components/MalImportDialog";
 import { CheckResultDialog } from "@/components/CheckResultDialog";
 import { MalScoreDialog } from "@/components/MalScoreDialog";
 import { AnimeDetailDialog } from "@/components/AnimeDetailDialog";
@@ -260,6 +261,7 @@ function Index() {
 
   // Stats dialog
   const [statsOpen, setStatsOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   // Check for new seasons
 
@@ -1405,7 +1407,10 @@ function Index() {
                 </span>
               )}
             </button>
-            <ProfileMenu onOpenStats={() => setStatsOpen(true)} />
+            <ProfileMenu
+              onOpenStats={() => setStatsOpen(true)}
+              onOpenImport={() => setImportOpen(true)}
+            />
           </div>
         </div>
         <div className="mx-auto max-w-5xl px-4 pb-4 sm:px-6">
@@ -2555,6 +2560,16 @@ function Index() {
 
       {/* Stats dialog */}
       <StatsDialog animes={animes} open={statsOpen} onOpenChange={setStatsOpen} />
+
+      <MalImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        animes={animes}
+        onCreated={(created) => setAnimes((prev) => [...prev, created])}
+        onUpdated={(updated) =>
+          setAnimes((prev) => prev.map((anime) => (anime.id === updated.id ? updated : anime)))
+        }
+      />
     </div>
   );
 }
