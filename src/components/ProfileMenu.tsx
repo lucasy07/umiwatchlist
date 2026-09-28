@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BarChart3, Loader2, LogOut, Pencil, Trash2, Upload } from "lucide-react";
+import { BarChart3, FileUp, Loader2, LogOut, Pencil, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,7 +59,12 @@ async function resizeToWebp(file: File): Promise<Blob> {
   }
 }
 
-export function ProfileMenu({ onOpenStats }: { onOpenStats: () => void }) {
+type ProfileMenuProps = {
+  onOpenStats: () => void;
+  onOpenImport: () => void;
+};
+
+export function ProfileMenu({ onOpenStats, onOpenImport }: ProfileMenuProps) {
   const { user, profile, refreshProfile, signOut } = useAuth();
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
@@ -187,6 +192,10 @@ export function ProfileMenu({ onOpenStats }: { onOpenStats: () => void }) {
           <DropdownMenuItem className="min-h-11 sm:min-h-0" onSelect={() => onOpenStats()}>
             <BarChart3 className="mr-2 h-4 w-4" />
             Estatísticas
+          </DropdownMenuItem>
+          <DropdownMenuItem className="min-h-11 sm:min-h-0" onSelect={() => onOpenImport()}>
+            <FileUp className="mr-2 h-4 w-4" />
+            Importar do MyAnimeList
           </DropdownMenuItem>
           <DropdownMenuItem className="min-h-11 sm:min-h-0" onSelect={() => setOpen(true)}>
             <Pencil className="mr-2 h-4 w-4" />
