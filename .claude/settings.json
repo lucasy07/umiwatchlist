@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bun run typecheck)",
+      "Bash(bun run test)",
+      "Bash(bun run lint)",
+      "Bash(bun run build)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)"
+    ],
+    "deny": [
+      "Bash(git push *)",
+      "Edit(/.env)",
+      "Edit(/supabase/config.toml)",
+      "Edit(/src/integrations/supabase/**)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun",
+            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/format.mjs"],
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
