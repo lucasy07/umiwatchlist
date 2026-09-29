@@ -184,7 +184,9 @@ export function MalImportDialog({
             {step === "preview" && "Confira o conteúdo antes de iniciar a importação."}
             {step === "importing" && "Sua lista está sendo organizada por franquia."}
             {step === "summary" &&
-              (cancelled ? "A importação foi cancelada. O que já foi importado ficou salvo." : "A importação foi concluída.")}
+              (cancelled
+                ? "A importação foi cancelada. O que já foi importado ficou salvo."
+                : "A importação foi concluída.")}
           </DialogDescription>
         </DialogHeader>
 
