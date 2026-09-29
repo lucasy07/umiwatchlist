@@ -126,6 +126,21 @@
       color-mix(in srgb, var(--background) 34%, transparent) 30%,
       color-mix(in srgb, var(--background) 80%, transparent) 100%
     );
+  --gradient-hero-scrim:
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--card) 55%, transparent) 0%,
+      transparent 28%,
+      transparent 45%,
+      color-mix(in srgb, var(--card) 85%, transparent) 82%,
+      var(--card) 100%
+    ),
+    linear-gradient(
+      to right,
+      var(--card) 0%,
+      color-mix(in srgb, var(--card) 75%, transparent) 30%,
+      transparent 65%
+    );
   --shadow-glow: 0 0 48px #e0446a38;
   --shadow-card: 0 1px 0 0 #ffffff0a inset, 0 1px 2px #00000059, 0 12px 32px -12px #0000008c;
   --shadow-elegant:
