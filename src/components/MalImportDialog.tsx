@@ -60,8 +60,10 @@ export function MalImportDialog({
   const [parsing, setParsing] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0, currentName: "" });
   const [summary, setSummary] = useState<MalImportSummary>(EMPTY_SUMMARY);
+  const [cancelled, setCancelled] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const parseSequenceRef = useRef(0);
 
   useEffect(() => {
     if (open) {
@@ -71,7 +73,10 @@ export function MalImportDialog({
       setParsing(false);
       setProgress({ done: 0, total: 0, currentName: "" });
       setSummary(EMPTY_SUMMARY);
+      setCancelled(false);
       if (fileRef.current) fileRef.current.value = "";
+    } else {
+      parseSequenceRef.current++;
     }
   }, [open]);
 
@@ -100,19 +105,24 @@ export function MalImportDialog({
 
   async function chooseFile(file: File | undefined) {
     if (!file) return;
+    const sequence = ++parseSequenceRef.current;
     setParsing(true);
     setParseError(null);
     try {
       const parsed = await parseMalExport(file);
+      if (sequence !== parseSequenceRef.current) return;
       setEntries(parsed);
       setStep("preview");
     } catch (error) {
+      if (sequence !== parseSequenceRef.current) return;
       setParseError(
         error instanceof Error ? error.message : "Não foi possível ler a lista do MAL.",
       );
     } finally {
-      setParsing(false);
-      if (fileRef.current) fileRef.current.value = "";
+      if (sequence === parseSequenceRef.current) {
+        setParsing(false);
+        if (fileRef.current) fileRef.current.value = "";
+      }
     }
   }
 
@@ -121,24 +131,33 @@ export function MalImportDialog({
     abortRef.current = controller;
     setProgress({ done: 0, total: entries.length, currentName: "" });
     setStep("importing");
-    const result = await runMalImport(entries, animes, {
-      signal: controller.signal,
-      onProgress: setProgress,
-      onCreated,
-      onUpdated,
-    });
-    if (abortRef.current !== controller) return;
-    abortRef.current = null;
-    setSummary(result);
-    setStep("summary");
-    if (controller.signal.aborted) {
-      toast("Importação cancelada", {
-        description: "O que já foi importado ficou salvo.",
+    try {
+      const result = await runMalImport(entries, animes, {
+        signal: controller.signal,
+        onProgress: setProgress,
+        onCreated,
+        onUpdated,
       });
-    } else {
-      toast.success(
-        `${result.created} ${result.created === 1 ? "anime criado" : "animes criados"}`,
-      );
+      if (abortRef.current !== controller) return;
+      abortRef.current = null;
+      setSummary(result);
+      setCancelled(controller.signal.aborted);
+      setStep("summary");
+      if (controller.signal.aborted) {
+        toast("Importação cancelada", {
+          description: "O que já foi importado ficou salvo.",
+        });
+      } else {
+        toast.success(
+          `${result.created} ${result.created === 1 ? "anime criado" : "animes criados"}`,
+        );
+      }
+    } catch (error) {
+      if (abortRef.current !== controller) return;
+      abortRef.current = null;
+      setStep("preview");
+      toast.error("Falha ao importar lista do MAL");
+      console.error("Mal import failed", error);
     }
   }
 
@@ -164,7 +183,8 @@ export function MalImportDialog({
             {step === "file" && "Use o arquivo oficial exportado pelo MyAnimeList."}
             {step === "preview" && "Confira o conteúdo antes de iniciar a importação."}
             {step === "importing" && "Sua lista está sendo organizada por franquia."}
-            {step === "summary" && "A importação foi concluída."}
+            {step === "summary" &&
+              (cancelled ? "A importação foi cancelada. O que já foi importado ficou salvo." : "A importação foi concluída.")}
           </DialogDescription>
         </DialogHeader>
 
@@ -302,7 +322,7 @@ function SummaryRow({ label, value }: { label: string; value: number }) {
 
 function SummaryList({ label, names }: { label: string; names: string[] }) {
   return (
-    <details className="group rounded-md border border-border/60" open={names.length > 0}>
+    <details className="group rounded-md border border-border/60">
       <summary className="focus-ring flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-md px-3 py-2 text-sm font-medium">
         <span>
           {label} <span className="text-muted-foreground">({names.length})</span>
