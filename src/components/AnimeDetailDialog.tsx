@@ -1,4 +1,6 @@
+import { useQuery } from "@tanstack/react-query";
 import { Award, Image as ImageIcon, Pencil, RefreshCw } from "lucide-react";
+import { useState } from "react";
 
 import { SeasonThumb } from "@/components/SeasonThumb";
 import { tierBg } from "@/components/TierPicker";
@@ -15,6 +17,7 @@ import {
   isExcludedFromAverage,
   mediaMAL,
 } from "@/lib/anime-storage";
+import { fetchAnilistBanner } from "@/lib/anilist-client";
 import { formatScore, scoreColor } from "@/lib/score-format";
 
 type AnimeDetailDialogProps = {
@@ -31,12 +34,30 @@ type AnimeDetailDialogProps = {
   onSelectGenre: (genre: string) => void;
 };
 
-function Poster({ src, alt, className }: { src: string | null; alt: string; className: string }) {
+function Poster({
+  src,
+  alt,
+  className,
+  hidden = false,
+}: {
+  src: string | null;
+  alt: string;
+  className: string;
+  hidden?: boolean;
+}) {
   const base = `aspect-[2/3] shrink-0 rounded-xl ring-1 ring-border/50 shadow-[var(--shadow-card)] ${className}`;
   return src ? (
-    <img src={src} alt={alt} className={`${base} object-cover`} />
+    <img
+      src={src}
+      alt={hidden ? "" : alt}
+      aria-hidden={hidden || undefined}
+      className={`${base} object-cover`}
+    />
   ) : (
-    <div className={`${base} flex items-center justify-center bg-secondary text-muted-foreground`}>
+    <div
+      aria-hidden={hidden || undefined}
+      className={`${base} flex items-center justify-center bg-secondary text-muted-foreground`}
+    >
       <ImageIcon className="h-8 w-8" />
     </div>
   );
@@ -56,6 +77,17 @@ export function AnimeDetailDialog({
   onSelectGenre,
 }: AnimeDetailDialogProps) {
   const image = anime ? (anime.cover ?? anime.imageUrl ?? null) : null;
+  const malId = anime ? (anime.malId ?? anime.seasons.find((s) => s.malId)?.malId ?? null) : null;
+  const { data: banner = null } = useQuery({
+    queryKey: ["anilist-banner", malId],
+    queryFn: ({ signal }) => fetchAnilistBanner(malId as number, signal),
+    enabled: open && malId != null,
+    staleTime: Infinity,
+    gcTime: 24 * 60 * 60 * 1000,
+    retry: false,
+  });
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+  const bannerLoaded = banner != null && loadedSrc === banner;
   const mal = anime ? mediaMAL(anime.seasons) : null;
   const time = anime ? animeMinutes(anime) : null;
   const meta = anime
@@ -75,23 +107,39 @@ export function AnimeDetailDialog({
           <>
             <section className="relative overflow-hidden px-5 pb-5 pt-14 sm:h-[340px] sm:p-0">
               {image && (
-                <>
-                  <img
-                    src={image}
-                    alt=""
-                    aria-hidden="true"
-                    className="absolute inset-[-40px] h-[calc(100%+80px)] w-[calc(100%+80px)] max-w-none scale-110 object-cover opacity-60 blur-2xl"
-                  />
-                  <div
-                    className="absolute inset-0"
-                    style={{ background: "var(--gradient-hero-scrim)" }}
-                  />
-                </>
+                <img
+                  src={image}
+                  alt=""
+                  aria-hidden="true"
+                  className={`absolute inset-[-40px] h-[calc(100%+80px)] w-[calc(100%+80px)] max-w-none scale-110 object-cover blur-2xl transition-opacity duration-500 motion-reduce:transition-none ${
+                    bannerLoaded ? "opacity-0" : "opacity-60"
+                  }`}
+                />
+              )}
+              {banner && (
+                <img
+                  src={banner}
+                  alt=""
+                  aria-hidden="true"
+                  onLoad={() => setLoadedSrc(banner)}
+                  onError={() => setLoadedSrc(null)}
+                  className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-500 motion-reduce:transition-none ${
+                    bannerLoaded ? "opacity-100" : "opacity-0"
+                  }`}
+                />
+              )}
+              {(image || banner) && (
+                <div
+                  className="absolute inset-0"
+                  style={{ background: "var(--gradient-hero-scrim)" }}
+                />
               )}
 
               <div className="relative z-10 flex flex-col gap-3.5 sm:absolute sm:bottom-7 sm:left-8 sm:right-[15rem] sm:max-w-[500px]">
-                <div className="flex items-end gap-4">
-                  <Poster src={image} alt={anime.name} className="w-24 sm:hidden" />
+                <div className="flex min-h-36 items-end gap-4 sm:min-h-0">
+                  {!bannerLoaded && (
+                    <Poster src={image} alt={anime.name} className="w-24 sm:hidden" />
+                  )}
                   <div className="flex items-center gap-3">
                     <span
                       className={`flex h-9 w-9 items-center justify-center rounded-lg font-display text-lg font-extrabold sm:h-10 sm:w-10 sm:text-xl ${
@@ -202,7 +250,10 @@ export function AnimeDetailDialog({
               <Poster
                 src={image}
                 alt={anime.name}
-                className="absolute bottom-7 right-8 z-10 hidden w-44 sm:block"
+                hidden={bannerLoaded}
+                className={`absolute bottom-7 right-8 z-10 hidden w-44 transition-opacity duration-300 motion-reduce:transition-none sm:block ${
+                  bannerLoaded ? "pointer-events-none opacity-0" : ""
+                }`}
               />
             </section>
 
