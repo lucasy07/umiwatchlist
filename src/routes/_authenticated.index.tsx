@@ -1964,7 +1964,7 @@ function Index() {
                             <img
                               src={anime.cover ?? anime.imageUrl ?? undefined}
                               alt={anime.name}
-                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                              className="h-full w-full object-cover transition-transform duration-500 motion-safe:group-hover:scale-105"
                               loading="lazy"
                             />
                           ) : (
@@ -2117,7 +2117,7 @@ function Index() {
                             title="Verificar novas temporadas"
                           >
                             <RefreshCw
-                              className={`h-3.5 w-3.5 ${checkingId === anime.id ? "animate-spin" : ""}`}
+                              className={`h-3.5 w-3.5 ${checkingId === anime.id ? "animate-spin motion-reduce:animate-none" : ""}`}
                             />
                           </Button>
                           <Button
@@ -2182,7 +2182,7 @@ function Index() {
                   <li
                     key={anime.id}
                     id={`anime-${anime.id}`}
-                    className={`group relative overflow-hidden rounded-2xl border border-border/60 transition-all ${animateRankingItems ? "animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-300 motion-reduce:animate-none" : ""} hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[var(--shadow-elegant)] ${
+                    className={`group relative overflow-hidden rounded-2xl border border-border/60 transition-[translate,border-color,box-shadow] ${animateRankingItems ? "animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-300 motion-reduce:animate-none" : ""} motion-safe:hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[var(--shadow-elegant)] ${
                       highlightId === anime.id ? "card-flash" : ""
                     } ${watchedFlashId === anime.id ? "watched-card-flash" : ""}`}
                     style={{
@@ -2230,7 +2230,7 @@ function Index() {
                           <img
                             src={anime.cover ?? anime.imageUrl ?? undefined}
                             alt={anime.name}
-                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            className="h-full w-full object-cover transition-transform duration-500 motion-safe:group-hover:scale-105"
                             loading="lazy"
                           />
                         ) : (
@@ -2405,7 +2405,7 @@ function Index() {
                             title="Verificar novas temporadas"
                           >
                             <RefreshCw
-                              className={`h-4 w-4 ${checkingId === anime.id ? "animate-spin" : ""}`}
+                              className={`h-4 w-4 ${checkingId === anime.id ? "animate-spin motion-reduce:animate-none" : ""}`}
                             />
                           </Button>
                           <Button
@@ -2436,7 +2436,7 @@ function Index() {
                 setFabOpen(false);
                 openAddSeason();
               }}
-              className="focus-ring flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-medium shadow-lg transition-transform hover:scale-105"
+              className="focus-ring flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-medium shadow-lg transition-transform motion-safe:hover:scale-105"
             >
               <Tv className="h-4 w-4 text-primary" /> Temporada
             </button>
@@ -2445,7 +2445,7 @@ function Index() {
                 setFabOpen(false);
                 setAnimeDialogOpen(true);
               }}
-              className="focus-ring flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-medium shadow-lg transition-transform hover:scale-105"
+              className="focus-ring flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-medium shadow-lg transition-transform motion-safe:hover:scale-105"
             >
               <Sparkles className="h-4 w-4 text-primary" /> Anime
             </button>
@@ -2453,7 +2453,7 @@ function Index() {
         )}
         <button
           onClick={() => setFabOpen((v) => !v)}
-          className="focus-ring flex h-14 w-14 items-center justify-center rounded-full text-primary-foreground ring-1 ring-primary/40 transition-transform hover:scale-110 active:scale-95"
+          className="focus-ring flex h-14 w-14 items-center justify-center rounded-full text-primary-foreground ring-1 ring-primary/40 transition-transform motion-safe:hover:scale-110 motion-safe:active:scale-95"
           style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
           aria-label="Adicionar"
         >

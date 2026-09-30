@@ -8,7 +8,7 @@ import type { Anime } from "@/lib/anime-storage";
 export function CoverArt({ anime }: { anime: Anime }) {
   const img = anime.cover ?? anime.imageUrl;
   return (
-    <div className="relative overflow-hidden rounded-lg ring-1 ring-border/50 transition-transform duration-200 group-hover:scale-105 group-hover:ring-primary/50 motion-reduce:transform-none">
+    <div className="relative overflow-hidden rounded-lg ring-1 ring-border/50 transition-transform duration-200 motion-safe:group-hover:scale-105 group-hover:ring-primary/50">
       {img ? (
         <img src={img} alt={anime.name} loading="lazy" className="aspect-[2/3] w-20 object-cover" />
       ) : (

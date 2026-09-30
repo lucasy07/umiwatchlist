@@ -213,7 +213,7 @@ export function AddAnimeDialog({ open, onOpenChange, animes, onCreate }: AddAnim
                 />
               ) : (
                 <div className="relative h-2 w-full overflow-hidden rounded-full bg-primary/20">
-                  <div className="h-full w-1/3 animate-pulse rounded-full bg-primary/70" />
+                  <div className="h-full w-1/3 animate-pulse rounded-full bg-primary/70 motion-reduce:animate-none" />
                 </div>
               )}
             </div>
