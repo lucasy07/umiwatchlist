@@ -1977,7 +1977,7 @@ function Index() {
                             className={`font-display absolute left-2 top-2 flex h-7 min-w-7 items-center justify-center rounded-full border px-2 text-xs font-bold backdrop-blur ${
                               idx === 0
                                 ? "border-primary bg-primary text-primary-foreground"
-                                : "border-border/60 bg-background/70 text-foreground/80"
+                                : "border-border bg-background text-foreground"
                             }`}
                           >
                             #{idx + 1}
@@ -2242,7 +2242,7 @@ function Index() {
                           className={`font-display absolute left-1.5 top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full border px-1.5 text-[11px] font-bold backdrop-blur sm:hidden ${
                             idx === 0
                               ? "border-primary bg-primary text-primary-foreground"
-                              : "border-border/60 bg-background/70 text-foreground/80"
+                              : "border-border bg-background text-foreground"
                           }`}
                         >
                           #{idx + 1}
