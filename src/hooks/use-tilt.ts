@@ -28,8 +28,8 @@ export function useTilt(options?: { max?: number; perspective?: number; scale?: 
       const rect = el.getBoundingClientRect();
       const px = (e.clientX - rect.left) / rect.width - 0.5;
       const py = (e.clientY - rect.top) / rect.height - 0.5;
-      const ry = px * max * 2;
-      const rx = -py * max * 2;
+      const ry = -px * max * 2;
+      const rx = py * max * 2;
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(() => {
         el.style.transition = "transform 80ms ease-out";
