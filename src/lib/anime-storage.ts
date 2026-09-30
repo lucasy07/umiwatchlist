@@ -421,11 +421,32 @@ export function formatReleaseLabel(dateStr?: string): string {
   return `Há ${Math.abs(d)} dias`;
 }
 
-export function formatDateBR(dateStr?: string): string {
+export function formatDateBR(dateStr?: string, { year = true }: { year?: boolean } = {}): string {
   if (!dateStr) return "";
   const d = new Date(dateStr + "T00:00:00");
   if (Number.isNaN(d.getTime())) return dateStr;
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+  return d.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    ...(year ? { year: "numeric" } : {}),
+  });
+}
+
+/** Premieres stay in the "Em breve" strip for this many days after release. */
+export const UPCOMING_RECENT_DAYS = 7;
+
+export type UpcomingStripItem = { anime: Anime; upcoming: UpcomingSeason; days: number };
+
+/** Scheduled seasons for the "Em breve" strip: valid date, released at most UPCOMING_RECENT_DAYS ago, soonest first. */
+export function selectUpcomingStrip(animes: Anime[]): UpcomingStripItem[] {
+  const items: UpcomingStripItem[] = [];
+  for (const anime of animes) {
+    const upcoming = anime.upcoming;
+    const days = daysUntil(upcoming?.releaseDate);
+    if (!upcoming || days === null || days < -UPCOMING_RECENT_DAYS) continue;
+    items.push({ anime, upcoming, days });
+  }
+  return items.sort((a, b) => a.days - b.days);
 }
 
 export async function updateLastCheckedAt(id: string, iso: string): Promise<void> {

@@ -104,6 +104,7 @@ import { TierPicker, tierColor, tierBg } from "@/components/TierPicker";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { StatsDialog } from "@/components/StatsDialog";
 import { ShareTierlistDialog } from "@/components/ShareTierlistDialog";
+import { UpcomingStrip } from "@/components/UpcomingStrip";
 import { MalImportDialog } from "@/components/MalImportDialog";
 import { CheckResultDialog } from "@/components/CheckResultDialog";
 import { MalScoreDialog } from "@/components/MalScoreDialog";
@@ -1740,6 +1741,9 @@ function Index() {
               : "opacity-100 transition-opacity duration-[180ms] ease-out"
           }`}
         >
+          {hydrated && displayMode.scoreMode === "mal" && (
+            <UpcomingStrip animes={animes} onOpen={openDetail} />
+          )}
           {!hydrated ? (
             <RankingSkeleton scoreMode={scoreMode} viewMode={viewMode} />
           ) : displayedRanked.length === 0 && filtersActive ? (

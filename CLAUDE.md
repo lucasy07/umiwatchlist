@@ -42,6 +42,8 @@ Antes de encerrar uma tarefa: `bun run test` e `bun run build` passando, sem err
 - `src/lib/jikan-client.ts` — cliente Jikan (retry em 429/5xx). `src/lib/jikan-chain.ts` — cadeia de sequels.
 - `src/lib/mal-import.ts` — import do export do MAL (roda no browser). `src/lib/migrations.ts` — backfill.
 - `src/lib/avatar-upload.ts` — upload de avatar (Supabase Storage).
+- `src/lib/tierlist-image.ts` — geração do PNG da tierlist "Meu gosto" (layout puro + Canvas 2D).
+- `src/lib/anilist-client.ts` — banner do AniList no detalhe do anime.
 - `src/components/` — componentes próprios. `src/components/ui/` é shadcn: não mexer sem motivo.
 - `src/styles.css` — tokens de tema no `:root` + `@theme inline`.
 

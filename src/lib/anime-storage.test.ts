@@ -15,6 +15,7 @@ import {
   isExcludedFromAverage,
   mediaMAL,
   parseJikanDuration,
+  selectUpcomingStrip,
   seasonMinutes,
   tierFromAverage,
   type Anime,
@@ -265,6 +266,13 @@ describe("formatDateBR", () => {
   it("preserva uma data inválida", () => {
     expect(formatDateBR("data-inválida")).toBe("data-inválida");
   });
+
+  it("omite o ano com year: false", () => {
+    expect(formatDateBR("2026-10-15")).toMatch(/2026/);
+    const short = formatDateBR("2026-10-15", { year: false });
+    expect(short).toMatch(/^15/);
+    expect(short).not.toMatch(/2026/);
+  });
 });
 
 describe("compareTierlistOrder", () => {
@@ -300,5 +308,51 @@ describe("compareTierlistOrder", () => {
     const list = ["x", "y", "z"].map((id) => anime({ id, tier: "B", tierPosition: 3 }));
     expect(ids([...list].sort(compareTierlistOrder))).toEqual(["x", "y", "z"]);
     expect(ids([...list].reverse().sort(compareTierlistOrder))).toEqual(["z", "y", "x"]);
+  });
+});
+
+describe("selectUpcomingStrip", () => {
+  const today = () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 8, 16, 12));
+  };
+  const withDate = (id: string, releaseDate: string, source?: "auto" | "manual") =>
+    anime({ id, upcoming: { title: `${id} T2`, releaseDate, source } });
+  const ids = (animes: Anime[]) => selectUpcomingStrip(animes).map((i) => i.anime.id);
+
+  it("exclui sem upcoming, data inválida e estreia há mais de 7 dias", () => {
+    today();
+    expect(
+      ids([
+        anime({ id: "sem" }),
+        withDate("invalida", "data-inválida"),
+        withDate("vazia", ""),
+        withDate("ha-8", "2026-09-08"),
+      ]),
+    ).toEqual([]);
+  });
+
+  it("inclui hoje, há 7 dias e futuras, ordenando por data", () => {
+    today();
+    const items = selectUpcomingStrip([
+      withDate("futuro", "2027-01-10"),
+      withDate("hoje", "2026-09-16"),
+      withDate("ha-7", "2026-09-09"),
+      withDate("amanha", "2026-09-17"),
+      withDate("ontem", "2026-09-15"),
+    ]);
+    expect(items.map((i) => i.anime.id)).toEqual(["ha-7", "ontem", "hoje", "amanha", "futuro"]);
+    expect(items.map((i) => i.days)).toEqual([-7, -1, 0, 1, 116]);
+  });
+
+  it("vale para source auto, manual e ausente", () => {
+    today();
+    expect(
+      ids([
+        withDate("auto", "2026-09-20", "auto"),
+        withDate("manual", "2026-09-21", "manual"),
+        withDate("legado", "2026-09-22"),
+      ]),
+    ).toEqual(["auto", "manual", "legado"]);
   });
 });
