@@ -2437,7 +2437,8 @@ function Index() {
                 setFabOpen(false);
                 openAddSeason();
               }}
-              className="focus-ring flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-medium shadow-lg transition-transform motion-safe:hover:scale-105"
+              className="focus-ring flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-medium shadow-lg transition-transform motion-safe:hover:scale-105 animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-200 ease-spring motion-reduce:animate-none"
+              style={{ animationDelay: "40ms" }}
             >
               <Tv className="h-4 w-4 text-primary" /> Temporada
             </button>
@@ -2446,7 +2447,7 @@ function Index() {
                 setFabOpen(false);
                 setAnimeDialogOpen(true);
               }}
-              className="focus-ring flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-medium shadow-lg transition-transform motion-safe:hover:scale-105"
+              className="focus-ring flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-medium shadow-lg transition-transform motion-safe:hover:scale-105 animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-200 ease-spring motion-reduce:animate-none"
             >
               <Sparkles className="h-4 w-4 text-primary" /> Anime
             </button>
@@ -2458,7 +2459,9 @@ function Index() {
           style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
           aria-label="Adicionar"
         >
-          <Plus className={`h-7 w-7 transition-transform ${fabOpen ? "rotate-45" : ""}`} />
+          <Plus
+            className={`h-7 w-7 transition-transform duration-200 ease-spring motion-reduce:transition-none ${fabOpen ? "rotate-45" : ""}`}
+          />
         </button>
       </div>
 
