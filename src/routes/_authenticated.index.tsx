@@ -1438,7 +1438,9 @@ function Index() {
                 }
               }}
               placeholder="Buscar na sua coleção..."
-              className="h-11 border-border/60 bg-card pl-10 pr-12 text-base placeholder:text-muted-foreground/70 focus-visible:ring-primary/40"
+              className={`h-11 border-border/60 bg-card pl-10 text-base placeholder:text-muted-foreground/70 focus-visible:ring-primary/40 ${
+                search !== "" ? "pr-12" : "pr-3"
+              }`}
             />
             {search !== "" && (
               <button
