@@ -9,8 +9,8 @@
       "Bash(git diff *)",
       "Bash(git log *)"
     ],
+    "ask": ["Bash(git push)", "Bash(git push *)"],
     "deny": [
-      "Bash(git push *)",
       "Edit(/.env)",
       "Edit(/supabase/config.toml)",
       "Edit(/src/integrations/supabase/**)"
