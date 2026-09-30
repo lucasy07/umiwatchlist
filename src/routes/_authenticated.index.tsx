@@ -2155,6 +2155,29 @@ function Index() {
                 const primaryValue = malAvg != null ? malAvg.toFixed(2) : "—";
                 const primaryColor = malAvg != null ? rankColor(malAvg) : "text-muted-foreground";
                 const isOpen = expanded[anime.id] ?? false;
+                const score = (
+                  <div className="flex items-baseline gap-1">
+                    <span
+                      className={`font-display text-xl font-bold tabular-nums sm:text-3xl ${primaryColor}`}
+                    >
+                      {primaryValue}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">/10</span>
+                  </div>
+                );
+                const tierBadge = (
+                  <Badge
+                    variant="outline"
+                    className="gap-1 border-primary/30 px-1.5 py-0 text-[10px] text-foreground/80"
+                  >
+                    <span
+                      key={anime.tier ?? "none"}
+                      className={`tier-badge-pop font-display font-bold transition-colors duration-200 motion-reduce:transition-none ${tierColor(anime.tier)}`}
+                    >
+                      {anime.tier ?? "—"}
+                    </span>
+                  </Badge>
+                );
                 return (
                   <li
                     key={anime.id}
@@ -2190,7 +2213,7 @@ function Index() {
                       }}
                     >
                       <div
-                        className={`font-display flex h-10 w-8 shrink-0 items-center justify-center text-sm font-bold sm:h-14 sm:w-10 sm:text-xl ${
+                        className={`font-display hidden h-10 w-8 shrink-0 items-center justify-center text-sm font-bold sm:flex sm:h-14 sm:w-10 sm:text-xl ${
                           idx === 0
                             ? "text-primary"
                             : idx === 1
@@ -2215,11 +2238,27 @@ function Index() {
                             <ImageIcon className="h-7 w-7 text-primary/40" />
                           </div>
                         )}
+                        <div
+                          className={`font-display absolute left-1.5 top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full border px-1.5 text-[11px] font-bold backdrop-blur sm:hidden ${
+                            idx === 0
+                              ? "border-primary/60 bg-primary/20 text-primary"
+                              : "border-border/60 bg-background/70 text-foreground/80"
+                          }`}
+                        >
+                          #{idx + 1}
+                        </div>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-display truncate text-base font-semibold tracking-tight sm:text-lg">
+                        <h3
+                          className="font-display line-clamp-2 break-words text-base font-semibold tracking-tight sm:line-clamp-1 sm:text-lg"
+                          title={anime.name}
+                        >
                           {anime.name}
                         </h3>
+                        <div className="mt-1 flex items-center gap-2 sm:hidden">
+                          {score}
+                          {tierBadge}
+                        </div>
                         <p className="mt-0.5 text-[11px] uppercase tracking-wider text-muted-foreground">
                           {anime.seasons.length}{" "}
                           {anime.seasons.length === 1 ? "temporada" : "temporadas"}
@@ -2267,32 +2306,15 @@ function Index() {
                           </div>
                         )}
                       </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <div className="flex items-baseline gap-1">
-                          <span
-                            className={`font-display text-2xl font-bold tabular-nums sm:text-3xl ${primaryColor}`}
-                          >
-                            {primaryValue}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground">/10</span>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className="gap-1 border-primary/30 px-1.5 py-0 text-[10px] text-foreground/80"
-                        >
-                          <span
-                            key={anime.tier ?? "none"}
-                            className={`tier-badge-pop font-display font-bold transition-colors duration-200 motion-reduce:transition-none ${tierColor(anime.tier)}`}
-                          >
-                            {anime.tier ?? "—"}
-                          </span>
-                        </Badge>
+                      <div className="hidden flex-col items-end gap-1 sm:flex">
+                        {score}
+                        {tierBadge}
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => toggleExpand(anime.id)}
-                        className="shrink-0 rounded-full text-muted-foreground hover:text-primary"
+                        className="h-11 w-11 shrink-0 rounded-full text-muted-foreground hover:text-primary sm:h-9 sm:w-9"
                         aria-label={isOpen ? "Recolher" : "Expandir"}
                       >
                         {isOpen ? (
