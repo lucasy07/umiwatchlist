@@ -32,9 +32,7 @@ export function SegmentedToggle<T extends string>({
       <span
         aria-hidden="true"
         className={`pointer-events-none absolute inset-y-0.5 left-0.5 w-[calc(50%-0.125rem)] rounded-md bg-primary motion-reduce:transition-none ${
-          transitionsEnabled
-            ? "transition-transform duration-[260ms] ease-[cubic-bezier(.34,1.15,.64,1)]"
-            : ""
+          transitionsEnabled ? "transition-transform duration-[260ms] ease-spring" : ""
         } ${activeIndex === 1 ? "translate-x-full" : "translate-x-0"}`}
       />
       {options.map((option) => {
