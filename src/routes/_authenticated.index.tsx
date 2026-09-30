@@ -1329,7 +1329,7 @@ function Index() {
 
       {/* Header */}
       <header className="sticky top-0 z-30 border-b border-border/60 bg-background/70 backdrop-blur-xl">
-        <div className="mx-auto flex h-[72px] sm:h-[88px] max-w-5xl items-center justify-between gap-4 px-4 sm:px-6">
+        <div className="mx-auto flex h-[72px] sm:h-[88px] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
           <h1 className="min-w-0 shrink-0">
             <span className="sr-only">Umi Watchlist</span>
             <button
@@ -1413,7 +1413,7 @@ function Index() {
             />
           </div>
         </div>
-        <div className="mx-auto max-w-5xl px-4 pb-4 sm:px-6">
+        <div className="mx-auto max-w-7xl px-4 pb-4 sm:px-6">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -1448,7 +1448,7 @@ function Index() {
       </header>
 
       {/* List */}
-      <main className="mx-auto max-w-5xl px-4 pb-32 pt-6 sm:px-6">
+      <main className="mx-auto max-w-7xl px-4 pb-32 pt-6 sm:px-6">
         <div
           className={`mb-4 flex items-center gap-3 ${scoreMode === "gosto" ? "justify-end" : "justify-between"}`}
         >
@@ -1917,7 +1917,7 @@ function Index() {
               </div>
             )
           ) : displayMode.viewMode === "grid" ? (
-            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
               {displayedRanked.map((anime, idx) => {
                 const malAvg = mediaMAL(anime.seasons);
                 const primaryValue = malAvg != null ? malAvg.toFixed(2) : "—";
@@ -2643,7 +2643,7 @@ function RankingSkeleton({
         className="animate-in fade-in-0 duration-150 motion-reduce:animate-none"
       >
         <span className="sr-only">Carregando…</span>
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
           {Array.from({ length: 8 }).map((_, i) => (
             <li
               key={i}
