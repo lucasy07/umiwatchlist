@@ -293,7 +293,6 @@ function readTheme(): Theme {
 }
 
 const IMAGE_TIMEOUT_MS = 15_000;
-const HEADER_TEXT = "minha tierlist";
 
 function throwIfAborted(signal?: AbortSignal) {
   if (signal?.aborted) throw new DOMException("Geração cancelada", "AbortError");
@@ -366,17 +365,15 @@ export async function renderTierlistImage(
   const theme = readTheme();
 
   const labelFont = Math.round(layout.labelW * 0.42);
-  const headerFont = Math.round(layout.header.h * 0.42);
   const overflowFont = Math.round(layout.coverW * 0.24);
   const fonts = {
-    header: `700 ${headerFont}px ${theme.fontDisplay}`,
     label: `700 ${labelFont}px ${theme.fontDisplay}`,
     overflow: `700 ${overflowFont}px ${theme.fontDisplay}`,
     name: `500 ${layout.fontSize}px ${theme.fontSans}`,
   };
   const names = rows.flatMap((r) => r.items.map((a) => a.name)).join(" ");
   await Promise.all([
-    document.fonts.load(fonts.header, `${HEADER_TEXT} ${TIER_ORDER.join("")} +0123456789`),
+    document.fonts.load(fonts.label, `${TIER_ORDER.join("")} +0123456789`),
     document.fonts.load(fonts.name, `${names}…`),
   ]);
   await document.fonts.ready;
@@ -406,18 +403,13 @@ export async function renderTierlistImage(
   ctx.fillStyle = theme.background;
   ctx.fillRect(0, 0, layout.width, layout.height);
 
-  // Header: logo on the left, title on the right.
+  // Header: logo on the left.
   const { header } = layout;
   if (logo.status === "fulfilled") {
     const logoH = header.h;
     const logoW = (logo.value.naturalWidth / logo.value.naturalHeight) * logoH;
     ctx.drawImage(logo.value, header.x, header.y, logoW, logoH);
   }
-  ctx.font = fonts.header;
-  ctx.fillStyle = theme.foreground;
-  ctx.textAlign = "right";
-  ctx.textBaseline = "middle";
-  ctx.fillText(HEADER_TEXT, header.x + header.w, header.y + header.h / 2);
 
   // Tier box, clipped to rounded corners like the on-screen list.
   const { box } = layout;
