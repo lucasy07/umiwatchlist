@@ -25,8 +25,16 @@ import {
   Gauge,
   Filter,
   Award,
+  MoreHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -2019,59 +2027,119 @@ function Index() {
                         </div>
                       </button>
 
-                      <div className="flex gap-1 p-2">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => openAddSeason(anime.id)}
-                          className="h-8 flex-1 text-xs transition-[color,box-shadow] duration-200 hover:bg-primary/15 hover:text-primary hover:ring-1 hover:ring-primary/40 focus-visible:bg-primary/15 focus-visible:text-primary focus-visible:ring-1 focus-visible:ring-primary/40 active:bg-primary/25"
-                        >
-                          <Plus className="mr-1 h-3.5 w-3.5" /> Temp.
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEdit(anime.id)}
-                          className="h-8 w-8 text-muted-foreground hover:text-primary"
-                          aria-label="Editar"
-                          title="Editar"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => checkNewSeasonsForAnime(anime.id)}
-                          disabled={checking || checkingId !== null || updatingMalScores}
-                          className="h-8 w-8 text-muted-foreground hover:text-primary"
-                          aria-label="Verificar novas temporadas"
-                          title="Verificar novas temporadas"
-                        >
-                          <RefreshCw
-                            className={`h-3.5 w-3.5 ${checkingId === anime.id ? "animate-spin" : ""}`}
-                          />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleWatchedToggle(anime.id, !anime.watched)}
-                          className={`h-8 w-8 hover:text-primary ${anime.watched ? "text-primary" : "text-muted-foreground"}`}
-                          aria-label={
-                            anime.watched ? "Desmarcar assistido" : "Marcar como assistido"
-                          }
-                          title={anime.watched ? "Desmarcar assistido" : "Marcar como assistido"}
-                        >
-                          <WatchedIcon watched={anime.watched} className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setConfirmDelete({ id: anime.id, name: anime.name })}
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          aria-label="Remover anime"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                      <div className="@container">
+                        <div className="flex gap-1 p-2 @min-[224px]:hidden">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => openAddSeason(anime.id)}
+                            className="h-11 flex-1 text-xs transition-[color,box-shadow] duration-200 hover:bg-primary/15 hover:text-primary hover:ring-1 hover:ring-primary/40 focus-visible:bg-primary/15 focus-visible:text-primary focus-visible:ring-1 focus-visible:ring-primary/40 active:bg-primary/25"
+                          >
+                            <Plus className="mr-1 h-3.5 w-3.5" /> Temp.
+                          </Button>
+                          <DropdownMenu modal={false}>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-11 w-11 text-muted-foreground hover:text-primary"
+                                aria-label={`Mais ações de ${anime.name}`}
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" collisionPadding={16} className="w-56">
+                              <DropdownMenuItem
+                                className="min-h-11"
+                                onSelect={() => openEdit(anime.id)}
+                              >
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="min-h-11"
+                                disabled={checking || checkingId !== null || updatingMalScores}
+                                onSelect={() => checkNewSeasonsForAnime(anime.id)}
+                              >
+                                <RefreshCw
+                                  className={`mr-2 h-4 w-4 ${checkingId === anime.id ? "animate-spin motion-reduce:animate-none" : ""}`}
+                                />
+                                Verificar novas temporadas
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="min-h-11"
+                                onSelect={() => handleWatchedToggle(anime.id, !anime.watched)}
+                              >
+                                <WatchedIcon watched={anime.watched} className="mr-2 h-4 w-4" />
+                                {anime.watched ? "Desmarcar assistido" : "Marcar como assistido"}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="min-h-11 text-destructive focus:text-destructive"
+                                onSelect={() =>
+                                  setConfirmDelete({ id: anime.id, name: anime.name })
+                                }
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Remover anime
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        <div className="hidden gap-1 p-2 @min-[224px]:flex">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => openAddSeason(anime.id)}
+                            className="h-8 flex-1 text-xs transition-[color,box-shadow] duration-200 hover:bg-primary/15 hover:text-primary hover:ring-1 hover:ring-primary/40 focus-visible:bg-primary/15 focus-visible:text-primary focus-visible:ring-1 focus-visible:ring-primary/40 active:bg-primary/25"
+                          >
+                            <Plus className="mr-1 h-3.5 w-3.5" /> Temp.
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEdit(anime.id)}
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            aria-label="Editar"
+                            title="Editar"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => checkNewSeasonsForAnime(anime.id)}
+                            disabled={checking || checkingId !== null || updatingMalScores}
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            aria-label="Verificar novas temporadas"
+                            title="Verificar novas temporadas"
+                          >
+                            <RefreshCw
+                              className={`h-3.5 w-3.5 ${checkingId === anime.id ? "animate-spin" : ""}`}
+                            />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleWatchedToggle(anime.id, !anime.watched)}
+                            className={`h-8 w-8 hover:text-primary ${anime.watched ? "text-primary" : "text-muted-foreground"}`}
+                            aria-label={
+                              anime.watched ? "Desmarcar assistido" : "Marcar como assistido"
+                            }
+                            title={anime.watched ? "Desmarcar assistido" : "Marcar como assistido"}
+                          >
+                            <WatchedIcon watched={anime.watched} className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setConfirmDelete({ id: anime.id, name: anime.name })}
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            aria-label="Remover anime"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
                     </TiltCardInner>
                   </li>
