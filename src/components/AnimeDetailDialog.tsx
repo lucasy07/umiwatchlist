@@ -134,6 +134,15 @@ export function AnimeDetailDialog({
                   style={{ background: "var(--gradient-hero-scrim)" }}
                 />
               )}
+              {banner && (
+                <div
+                  aria-hidden="true"
+                  className={`absolute inset-0 transition-opacity duration-500 motion-reduce:transition-none ${
+                    bannerLoaded ? "opacity-100" : "opacity-0"
+                  }`}
+                  style={{ background: "var(--gradient-hero-banner-scrim)" }}
+                />
+              )}
 
               <div className="relative z-10 flex flex-col gap-3.5 sm:absolute sm:bottom-7 sm:left-8 sm:right-[15rem] sm:max-w-[500px]">
                 <div className="flex min-h-36 items-end gap-4 sm:min-h-0">
