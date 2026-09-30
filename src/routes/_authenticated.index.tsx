@@ -128,6 +128,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { CoverArt, DraggableCover, TierDropRow } from "@/components/TierlistDnD";
+import { tierDropAnimation } from "@/lib/tier-drop-animation";
 
 import { buildChain } from "@/lib/jikan-chain";
 import { getJikanAnime } from "@/lib/jikan-client";
@@ -1914,7 +1915,7 @@ function Index() {
                   </div>
                   {(() => {
                     const overlay = (
-                      <DragOverlay>
+                      <DragOverlay dropAnimation={tierDropAnimation()}>
                         {draggingAnime ? (
                           <div className="group w-20 scale-105 rounded-lg ring-2 ring-primary/50">
                             <CoverArt anime={draggingAnime} />

@@ -4,6 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Image as ImageIcon } from "lucide-react";
 import type { CSSProperties } from "react";
 import type { Anime } from "@/lib/anime-storage";
+import { prefersReducedMotion } from "@/lib/tier-drop-animation";
 
 export function CoverArt({ anime }: { anime: Anime }) {
   const img = anime.cover ?? anime.imageUrl;
@@ -42,6 +43,7 @@ export function DraggableCover({
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: anime.id,
+    transition: prefersReducedMotion() ? null : undefined,
   });
   return (
     <button
