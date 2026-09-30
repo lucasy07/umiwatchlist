@@ -1318,6 +1318,25 @@ function Index() {
     }
   }
 
+  const viewToggle = (
+    <SegmentedToggle
+      options={[
+        {
+          value: "list",
+          ariaLabel: "Visualização em lista",
+          content: <ListIcon className="h-4 w-4" />,
+        },
+        {
+          value: "grid",
+          ariaLabel: "Visualização em grade",
+          content: <LayoutGrid className="h-4 w-4" />,
+        },
+      ]}
+      value={viewMode}
+      onChange={setViewMode}
+    />
+  );
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Toaster
@@ -1356,24 +1375,7 @@ function Index() {
             </button>
           </h1>
           <div className="flex items-center gap-2 sm:gap-3">
-            {scoreMode !== "gosto" && (
-              <SegmentedToggle
-                options={[
-                  {
-                    value: "list",
-                    ariaLabel: "Visualização em lista",
-                    content: <ListIcon className="h-4 w-4" />,
-                  },
-                  {
-                    value: "grid",
-                    ariaLabel: "Visualização em grade",
-                    content: <LayoutGrid className="h-4 w-4" />,
-                  },
-                ]}
-                value={viewMode}
-                onChange={setViewMode}
-              />
-            )}
+            {scoreMode !== "gosto" && <div className="hidden md:block">{viewToggle}</div>}
             <SegmentedToggle
               options={[
                 { value: "mal", ariaLabel: "Ordenar por nota do MAL", content: "MAL" },
@@ -1413,8 +1415,8 @@ function Index() {
             />
           </div>
         </div>
-        <div className="mx-auto max-w-7xl px-4 pb-4 sm:px-6">
-          <div className="relative">
+        <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 pb-4 sm:px-6">
+          <div className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               ref={searchInputRef}
@@ -1444,6 +1446,7 @@ function Index() {
               </button>
             )}
           </div>
+          {scoreMode !== "gosto" && <div className="md:hidden">{viewToggle}</div>}
         </div>
       </header>
 
