@@ -28,6 +28,13 @@ bun run typecheck   # tem 1 erro pré-existente em src/router.tsx:63
 
 Antes de encerrar uma tarefa: `bun run test` e `bun run build` passando, sem erros novos de typecheck/lint.
 
+## Ferramentas
+
+- Antes de usar API de TanStack Start/Router, Tailwind v4 ou React 19 de que
+  não tenha certeza, consulte a documentação via context7.
+- Em mudanças de UI, verifique no Chrome (chrome-devtools) com `bun run dev`
+  rodando: desktop e 375px de largura, e tire screenshot.
+
 ## Mapa
 
 - `src/routes/` — só `/auth` (`auth.tsx`) e `/` (`_authenticated.index.tsx`, ~2.7k linhas, o app inteiro). `_authenticated.tsx` é só o gate de sessão. `routeTree.gen.ts` é gerado.
