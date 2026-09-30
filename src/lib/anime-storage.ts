@@ -108,6 +108,22 @@ export function tierFromAverage(avg: number): Tier {
   return "E";
 }
 
+/** Tierlist order: tier desc (no tier last), then manual `tierPosition` asc with null last. Ties return 0 so a stable sort keeps input order. */
+export function compareTierlistOrder(
+  a: Pick<Anime, "tier" | "tierPosition">,
+  b: Pick<Anime, "tier" | "tierPosition">,
+): number {
+  const va = a.tier === null ? -1 : TIER_VALUE[a.tier];
+  const vb = b.tier === null ? -1 : TIER_VALUE[b.tier];
+  if (vb !== va) return vb - va;
+  const pa = a.tierPosition;
+  const pb = b.tierPosition;
+  if (pa == null && pb == null) return 0;
+  if (pa == null) return 1;
+  if (pb == null) return -1;
+  return pa - pb;
+}
+
 export const AWARD_GENRE = "Award Winning";
 
 export function isAwardWinning(anime: Anime): boolean {

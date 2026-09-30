@@ -6,6 +6,7 @@ import {
   TIER_VALUE,
   allGenres,
   animeMinutes,
+  compareTierlistOrder,
   formatDateBR,
   formatLastChecked,
   formatMinutes,
@@ -263,5 +264,41 @@ describe("formatDateBR", () => {
 
   it("preserva uma data inválida", () => {
     expect(formatDateBR("data-inválida")).toBe("data-inválida");
+  });
+});
+
+describe("compareTierlistOrder", () => {
+  const ids = (list: Anime[]) => list.map((a) => a.id);
+
+  it("ordena as tiers de S a E, sem tier por último", () => {
+    const list = (["E", null, "B", "S", "D", "A", "C"] as const).map((tier, i) =>
+      anime({ id: tier ?? "none", tier, tierPosition: i }),
+    );
+    expect(ids([...list].sort(compareTierlistOrder))).toEqual([
+      "S",
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "none",
+    ]);
+  });
+
+  it("dentro da tier ordena por tierPosition com null por último", () => {
+    const list = [
+      anime({ id: "n1", tier: "A", tierPosition: null }),
+      anime({ id: "p2", tier: "A", tierPosition: 2 }),
+      anime({ id: "p0", tier: "A", tierPosition: 0 }),
+      anime({ id: "n2", tier: "A", tierPosition: null }),
+      anime({ id: "p1", tier: "A", tierPosition: 1 }),
+    ];
+    expect(ids([...list].sort(compareTierlistOrder))).toEqual(["p0", "p1", "p2", "n1", "n2"]);
+  });
+
+  it("mantém a ordem de entrada em empates", () => {
+    const list = ["x", "y", "z"].map((id) => anime({ id, tier: "B", tierPosition: 3 }));
+    expect(ids([...list].sort(compareTierlistOrder))).toEqual(["x", "y", "z"]);
+    expect(ids([...list].reverse().sort(compareTierlistOrder))).toEqual(["z", "y", "x"]);
   });
 });

@@ -25,6 +25,7 @@ import {
   Filter,
   Award,
   MoreHorizontal,
+  Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -66,6 +67,7 @@ import {
   type Tier,
   type UpcomingSeason,
   TIER_VALUE,
+  compareTierlistOrder,
   fetchAnimes,
   createAnime,
   deleteAnime as deleteAnimeRow,
@@ -101,6 +103,7 @@ import { useAuth } from "@/auth/AuthProvider";
 import { TierPicker, tierColor, tierBg } from "@/components/TierPicker";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { StatsDialog } from "@/components/StatsDialog";
+import { ShareTierlistDialog } from "@/components/ShareTierlistDialog";
 import { MalImportDialog } from "@/components/MalImportDialog";
 import { CheckResultDialog } from "@/components/CheckResultDialog";
 import { MalScoreDialog } from "@/components/MalScoreDialog";
@@ -269,6 +272,7 @@ function Index() {
 
   // Stats dialog
   const [statsOpen, setStatsOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
 
   // Check for new seasons
@@ -472,17 +476,7 @@ function Index() {
   const ranked = useMemo(() => {
     const filtered = animes.filter((anime) => animeMatchesFilters(anime));
     if (scoreMode === "gosto") {
-      return [...filtered].sort((a, b) => {
-        const va = a.tier === null ? -1 : TIER_VALUE[a.tier];
-        const vb = b.tier === null ? -1 : TIER_VALUE[b.tier];
-        if (vb !== va) return vb - va;
-        const pa = a.tierPosition;
-        const pb = b.tierPosition;
-        if (pa == null && pb == null) return 0;
-        if (pa == null) return 1;
-        if (pb == null) return -1;
-        return pa - pb;
-      });
+      return [...filtered].sort(compareTierlistOrder);
     }
 
     return [...filtered].sort(compareByMAL);
@@ -500,17 +494,7 @@ function Index() {
   const displayedRanked = useMemo(() => {
     const filtered = animes.filter((anime) => animeMatchesFilters(anime, displayMode.scoreMode));
     if (displayMode.scoreMode === "gosto") {
-      return [...filtered].sort((a, b) => {
-        const va = a.tier === null ? -1 : TIER_VALUE[a.tier];
-        const vb = b.tier === null ? -1 : TIER_VALUE[b.tier];
-        if (vb !== va) return vb - va;
-        const pa = a.tierPosition;
-        const pb = b.tierPosition;
-        if (pa == null && pb == null) return 0;
-        if (pa == null) return 1;
-        if (pb == null) return -1;
-        return pa - pb;
-      });
+      return [...filtered].sort(compareTierlistOrder);
     }
     return [...filtered].sort(compareByMAL);
   }, [
@@ -1462,9 +1446,18 @@ function Index() {
 
       {/* List */}
       <main className="mx-auto max-w-7xl px-4 pb-32 pt-6 sm:px-6">
-        <div
-          className={`mb-4 flex items-center gap-3 ${scoreMode === "gosto" ? "justify-end" : "justify-between"}`}
-        >
+        <div className="mb-4 flex items-center justify-between gap-3">
+          {scoreMode === "gosto" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShareOpen(true)}
+              className="focus-ring h-11 gap-1.5 text-xs sm:h-8"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+              Compartilhar
+            </Button>
+          )}
           {scoreMode !== "gosto" && (
             <div className="flex min-w-0 items-center gap-2">
               <Button
@@ -2657,6 +2650,7 @@ function Index() {
 
       {/* Stats dialog */}
       <StatsDialog animes={animes} open={statsOpen} onOpenChange={setStatsOpen} />
+      <ShareTierlistDialog animes={animes} open={shareOpen} onOpenChange={setShareOpen} />
 
       <MalImportDialog
         open={importOpen}
