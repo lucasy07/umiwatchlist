@@ -11,7 +11,6 @@ import {
   Star,
   Trash2,
   ChevronDown,
-  ChevronUp,
   Tv,
   Sparkles,
   X,
@@ -2317,17 +2316,16 @@ function Index() {
                         onClick={() => toggleExpand(anime.id)}
                         className="h-11 w-11 shrink-0 rounded-full text-muted-foreground hover:text-primary sm:h-9 sm:w-9"
                         aria-label={isOpen ? "Recolher" : "Expandir"}
+                        aria-expanded={isOpen}
                       >
-                        {isOpen ? (
-                          <ChevronUp className="h-5 w-5" />
-                        ) : (
-                          <ChevronDown className="h-5 w-5" />
-                        )}
+                        <ChevronDown
+                          className={`h-5 w-5 transition-transform duration-200 ease-spring motion-reduce:transition-none ${isOpen ? "rotate-180" : ""}`}
+                        />
                       </Button>
                     </div>
 
                     {isOpen && (
-                      <div className="border-t border-border bg-background/30 px-4 py-3 sm:px-5">
+                      <div className="border-t border-border bg-background/30 px-4 py-3 animate-in fade-in-0 slide-in-from-top-1 fill-mode-both duration-200 ease-out-soft motion-reduce:animate-none sm:px-5">
                         <div className="mb-3 flex flex-wrap items-center gap-2">
                           <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
                             Meu tier
