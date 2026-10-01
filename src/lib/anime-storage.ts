@@ -647,6 +647,8 @@ export function mergeLegacyUpcoming(
 export type UpcomingEntry = {
   title: string;
   releaseDate: string;
+  /** null = unknown (legacy or fallback), treated as day. */
+  releasePrecision: ReleasePrecision | null;
   imageUrl: string | null;
   seasonId: string | null;
 };
@@ -659,6 +661,7 @@ export function upcomingEntries(anime: Anime): UpcomingEntry[] {
     entries.push({
       title: s.name,
       releaseDate: s.releaseDate,
+      releasePrecision: s.releasePrecision ?? null,
       imageUrl: s.imageUrl ?? null,
       seasonId: s.id,
     });
@@ -668,6 +671,7 @@ export function upcomingEntries(anime: Anime): UpcomingEntry[] {
     entries.push({
       title: legacy.title,
       releaseDate: legacy.releaseDate,
+      releasePrecision: null,
       imageUrl: null,
       seasonId: null,
     });
@@ -686,13 +690,52 @@ export function nextRelease(anime: Anime): UpcomingEntry | null {
 
 export type UpcomingStripItem = { anime: Anime; entry: UpcomingEntry; days: number };
 
-/** Scheduled seasons for the "Em breve" strip: valid date, released at most UPCOMING_RECENT_DAYS ago, soonest first. */
+/** Month or year precision: the exact day is unknown, so no day countdown. */
+export function isVaguePrecision(precision: ReleasePrecision | null | undefined): boolean {
+  return precision === "month" || precision === "year";
+}
+
+/** Release label at its precision: "Amanhã" / "Em 12 dias" for a day, "out. de 2027" / "2027" otherwise. */
+export function formatReleaseRelative(
+  dateStr: string,
+  precision: ReleasePrecision | null | undefined,
+): string {
+  return isVaguePrecision(precision)
+    ? formatReleaseDate(dateStr, precision)
+    : formatReleaseLabel(dateStr);
+}
+
+/** Last day (ISO) of the month or year a vague date points to; the date itself for day precision. */
+export function releasePeriodEnd(
+  dateStr: string,
+  precision: ReleasePrecision | null | undefined,
+): string {
+  const year = Number(dateStr.slice(0, 4));
+  if (precision === "year") return `${year}-12-31`;
+  if (precision === "month") {
+    const month = Number(dateStr.slice(5, 7));
+    const lastDay = new Date(year, month, 0).getDate();
+    return `${dateStr.slice(0, 7)}-${String(lastDay).padStart(2, "0")}`;
+  }
+  return dateStr;
+}
+
+/**
+ * Scheduled seasons for the "Em breve" strip, soonest first. Day precision stays up to
+ * UPCOMING_RECENT_DAYS after release; month/year precision stays until the period ends.
+ */
 export function selectUpcomingStrip(animes: Anime[]): UpcomingStripItem[] {
   const items: UpcomingStripItem[] = [];
   for (const anime of animes) {
     for (const entry of upcomingEntries(anime)) {
       const days = daysUntil(entry.releaseDate);
-      if (days === null || days < -UPCOMING_RECENT_DAYS) continue;
+      if (days === null) continue;
+      if (isVaguePrecision(entry.releasePrecision)) {
+        const end = daysUntil(releasePeriodEnd(entry.releaseDate, entry.releasePrecision));
+        if (end === null || end < 0) continue;
+      } else if (days < -UPCOMING_RECENT_DAYS) {
+        continue;
+      }
       items.push({ anime, entry, days });
     }
   }

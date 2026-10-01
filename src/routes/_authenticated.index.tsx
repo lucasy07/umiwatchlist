@@ -85,9 +85,10 @@ import {
   mediaMAL,
   nextRelease,
   releasedSeasons,
+  formatReleaseDate,
+  formatReleaseRelative,
+  isVaguePrecision,
   rankColor,
-  formatReleaseLabel,
-  formatDateBR,
   formatLastChecked,
   allGenres,
   AWARD_GENRE,
@@ -2012,9 +2013,15 @@ function Index() {
                             </div>
                           )}
                           {next && (
-                            <span className="absolute left-2 top-11 inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground shadow-lg">
+                            <span
+                              className={`absolute left-2 top-11 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold shadow-lg ${
+                                isVaguePrecision(next.releasePrecision)
+                                  ? "border border-(--border-strong) bg-card-elevated text-foreground"
+                                  : "bg-primary text-primary-foreground"
+                              }`}
+                            >
                               <CalendarClock className="h-3 w-3" />
-                              {formatReleaseLabel(next.releaseDate)}
+                              {formatReleaseRelative(next.releaseDate, next.releasePrecision)}
                             </span>
                           )}
                           <div
@@ -2266,9 +2273,15 @@ function Index() {
                           {seasonCount} {seasonCount === 1 ? "temporada" : "temporadas"}
                         </p>
                         {next && (
-                          <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                          <span
+                            className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                              isVaguePrecision(next.releasePrecision)
+                                ? "bg-card-elevated text-muted-foreground"
+                                : "bg-primary/15 text-primary"
+                            }`}
+                          >
                             <CalendarClock className="h-3 w-3" />
-                            {formatReleaseLabel(next.releaseDate)}
+                            {formatReleaseRelative(next.releaseDate, next.releasePrecision)}
                           </span>
                         )}
                         {(isAwardWinning(anime) || (anime.genres && anime.genres.length > 0)) && (
@@ -2349,14 +2362,27 @@ function Index() {
                           />
                         )}
                         {next && (
-                          <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
+                          <div
+                            className={`mt-3 flex items-center justify-between gap-2 rounded-lg border px-3 py-2 ${
+                              isVaguePrecision(next.releasePrecision)
+                                ? "border-border bg-card-elevated/50"
+                                : "border-primary/20 bg-primary/5"
+                            }`}
+                          >
                             <div className="min-w-0">
-                              <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+                              <div
+                                className={`flex items-center gap-1.5 text-xs font-semibold ${
+                                  isVaguePrecision(next.releasePrecision)
+                                    ? "text-foreground"
+                                    : "text-primary"
+                                }`}
+                              >
                                 <CalendarClock className="h-3.5 w-3.5" />
-                                {formatReleaseLabel(next.releaseDate)}
+                                {formatReleaseRelative(next.releaseDate, next.releasePrecision)}
                               </div>
                               <p className="truncate text-[11px] text-muted-foreground">
-                                {next.title} • {formatDateBR(next.releaseDate)}
+                                {next.title} •{" "}
+                                {formatReleaseDate(next.releaseDate, next.releasePrecision)}
                               </p>
                             </div>
                             <Button

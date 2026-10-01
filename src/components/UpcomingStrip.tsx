@@ -2,7 +2,8 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { ChevronLeft, ChevronRight, Image as ImageIcon } from "lucide-react";
 import {
   formatDateBR,
-  formatReleaseLabel,
+  formatReleaseRelative,
+  isVaguePrecision,
   selectUpcomingStrip,
   type Anime,
   type UpcomingStripItem,
@@ -18,7 +19,9 @@ type UpcomingStripProps = {
 /** Premieres within this many days (including today) get the primary highlight. */
 const SOON_DAYS = 7;
 
-function itemTone(days: number): "released" | "soon" | "later" {
+function itemTone({ entry, days }: UpcomingStripItem): "released" | "soon" | "later" | "vague" {
+  // Only a known day can be counted down, highlighted or marked as premiered.
+  if (isVaguePrecision(entry.releasePrecision)) return "vague";
   if (days < 0) return "released";
   if (days <= SOON_DAYS) return "soon";
   return "later";
@@ -28,18 +31,20 @@ const DOT_TONE = {
   soon: "bg-primary-on-dark shadow-[0_0_12px_2px_color-mix(in_srgb,var(--primary-glow)_55%,transparent)]",
   released: "bg-accent",
   later: "bg-border-interactive",
+  vague: "border-[1.5px] border-dashed border-border-interactive bg-background",
 } as const;
 
 const LABEL_TONE = {
   soon: "text-(--primary-glow)",
   released: "text-accent",
   later: "text-foreground",
+  vague: "text-muted-foreground",
 } as const;
 
 export function UpcomingStrip({ animes, onOpen }: UpcomingStripProps) {
   const titleId = useId();
   const items = useMemo(() => selectUpcomingStrip(animes), [animes]);
-  const scheduled = items.filter((item) => item.days >= 0).length;
+  const scheduled = items.filter((item) => itemTone(item) !== "released").length;
   const trackRef = useRef<HTMLUListElement>(null);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(true);
@@ -128,14 +133,16 @@ export function UpcomingStrip({ animes, onOpen }: UpcomingStripProps) {
 }
 
 function UpcomingStripEntry({
-  item: { anime, entry, days },
+  item,
   onOpen,
 }: {
   item: UpcomingStripItem;
   onOpen: (animeId: string) => void;
 }) {
-  const tone = itemTone(days);
-  const label = formatReleaseLabel(entry.releaseDate);
+  const { anime, entry } = item;
+  const tone = itemTone(item);
+  const label = formatReleaseRelative(entry.releaseDate, entry.releasePrecision);
+  const exactDay = tone !== "vague";
   const cover = entry.imageUrl ?? anime.cover ?? anime.imageUrl;
 
   return (
@@ -143,7 +150,7 @@ function UpcomingStripEntry({
       <button
         type="button"
         onClick={() => onOpen(anime.id)}
-        aria-label={`${entry.title}, ${anime.name}, ${label}, ${formatDateBR(entry.releaseDate)}`}
+        aria-label={`${entry.title}, ${anime.name}, ${label}${exactDay ? `, ${formatDateBR(entry.releaseDate)}` : ""}`}
         className="focus-ring group/button block w-32 rounded-lg pr-3 text-left sm:w-38 sm:pr-4"
       >
         <div className="relative flex h-7 items-center gap-1 before:absolute before:top-1/2 before:left-0 before:-right-3 before:h-px before:bg-(--border-strong) group-last/item:before:right-0 sm:before:-right-4">
@@ -171,9 +178,11 @@ function UpcomingStripEntry({
               Estreou
             </span>
           )}
-          <span className="absolute bottom-1.5 left-1.5 rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-bold text-foreground backdrop-blur-sm">
-            {formatDateBR(entry.releaseDate, { year: false })}
-          </span>
+          {exactDay && (
+            <span className="absolute bottom-1.5 left-1.5 rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-bold text-foreground backdrop-blur-sm">
+              {formatDateBR(entry.releaseDate, { year: false })}
+            </span>
+          )}
         </div>
 
         <div className="mt-2 line-clamp-2 font-display text-[13px] leading-tight font-bold">

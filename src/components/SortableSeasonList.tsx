@@ -22,7 +22,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { type Season, isExcludedFromAverage } from "@/lib/anime-storage";
+import { UnreleasedTag } from "@/components/UnreleasedTag";
+import {
+  type Season,
+  formatReleaseDate,
+  isExcludedFromAverage,
+  isUnreleased,
+} from "@/lib/anime-storage";
 
 type Props = {
   seasons: Season[];
@@ -92,6 +98,14 @@ function SortableSeasonItem({
         >
           Na média
         </Label>
+        {isUnreleased(season) && (
+          <span className="ml-auto flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+            <UnreleasedTag />
+            <span className="truncate">
+              {formatReleaseDate(season.releaseDate, season.releasePrecision)}
+            </span>
+          </span>
+        )}
       </div>
     </li>
   );

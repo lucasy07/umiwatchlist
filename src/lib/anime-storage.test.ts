@@ -11,6 +11,7 @@ import {
   formatLastChecked,
   formatMinutes,
   formatReleaseDate,
+  formatReleaseRelative,
   formatReleaseLabel,
   isAwardWinning,
   isExcludedFromAverage,
@@ -513,6 +514,7 @@ describe("selectUpcomingStrip", () => {
     expect(items[1].entry).toEqual({
       title: "a-futuro nome",
       releaseDate: "2027-01-10",
+      releasePrecision: null,
       imageUrl: "capa.jpg",
       seasonId: "a-futuro",
     });
@@ -563,7 +565,13 @@ describe("nextRelease", () => {
   it("cai no legado quando não há não lançadas", () => {
     expect(
       nextRelease(anime({ upcoming: { title: "Legado", releaseDate: "2027-04-01" } })),
-    ).toEqual({ title: "Legado", releaseDate: "2027-04-01", imageUrl: null, seasonId: null });
+    ).toEqual({
+      title: "Legado",
+      releaseDate: "2027-04-01",
+      releasePrecision: null,
+      imageUrl: null,
+      seasonId: null,
+    });
     expect(nextRelease(anime())).toBeNull();
   });
 });
@@ -812,5 +820,55 @@ describe("formatReleaseDate", () => {
     expect(formatReleaseDate("2027-10-01", "month")).toBe("out. de 2027");
     expect(formatReleaseDate("2027-01-01", "year")).toBe("2027");
     expect(formatReleaseDate(null, null)).toBe("sem data");
+  });
+});
+
+describe("formatReleaseRelative", () => {
+  it("conta dias só quando o dia é conhecido", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 8, 16, 12));
+    expect(formatReleaseRelative("2026-09-28", "day")).toBe("Em 12 dias");
+    expect(formatReleaseRelative("2026-09-17", null)).toBe("Amanhã");
+    expect(formatReleaseRelative("2027-10-01", "month")).toBe("out. de 2027");
+    expect(formatReleaseRelative("2027-01-01", "year")).toBe("2027");
+  });
+});
+
+describe("selectUpcomingStrip com precisão", () => {
+  const at = (date: Date) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(date);
+  };
+  const vague = (id: string, releaseDate: string, releasePrecision: "day" | "month" | "year") =>
+    anime({
+      id,
+      seasons: [season({ id: `${id}-s`, unreleased: true, releaseDate, releasePrecision })],
+    });
+  const ids = (animes: Anime[]) => selectUpcomingStrip(animes).map((i) => i.anime.id);
+
+  it("mês em andamento fica até o fim do mês e mês encerrado sai", () => {
+    at(new Date(2026, 8, 30, 12));
+    expect(ids([vague("set", "2026-09-01", "month"), vague("ago", "2026-08-01", "month")])).toEqual(
+      ["set"],
+    );
+    at(new Date(2026, 9, 1, 12));
+    expect(ids([vague("set", "2026-09-01", "month")])).toEqual([]);
+  });
+
+  it("ano em andamento fica, e dia há 8 dias sai", () => {
+    at(new Date(2026, 8, 16, 12));
+    expect(ids([vague("ano", "2026-01-01", "year"), vague("ha-8", "2026-09-08", "day")])).toEqual([
+      "ano",
+    ]);
+  });
+
+  it("mês ou ano já iniciado continua com precisão vaga, nunca como estreia de dia", () => {
+    at(new Date(2026, 8, 16, 12));
+    const [item] = selectUpcomingStrip([vague("set", "2026-09-01", "month")]);
+    expect(item.days).toBeLessThan(0);
+    expect(item.entry.releasePrecision).toBe("month");
+    expect(formatReleaseRelative(item.entry.releaseDate, item.entry.releasePrecision)).toBe(
+      "set. de 2026",
+    );
   });
 });

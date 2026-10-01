@@ -3,6 +3,7 @@ import { Award, Image as ImageIcon, Pencil, RefreshCw } from "lucide-react";
 import { useState } from "react";
 
 import { SeasonThumb } from "@/components/SeasonThumb";
+import { UnreleasedTag } from "@/components/UnreleasedTag";
 import { tierBg } from "@/components/TierPicker";
 import { WatchedIcon } from "@/components/WatchedIcon";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,8 @@ import {
   formatMinutes,
   isAwardWinning,
   isExcludedFromAverage,
+  isUnreleased,
+  formatReleaseDate,
   mediaMAL,
   releasedSeasons,
 } from "@/lib/anime-storage";
@@ -277,17 +280,29 @@ export function AnimeDetailDialog({
               ) : (
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(84px,1fr))] gap-3">
                   {anime.seasons.map((season) => {
-                    const excluded = isExcludedFromAverage(season);
+                    const unreleased = isUnreleased(season);
+                    const excluded = !unreleased && isExcludedFromAverage(season);
                     return (
                       <div
                         key={season.id}
                         className={`flex flex-col gap-1 ${excluded ? "opacity-60" : ""}`}
                       >
-                        <SeasonThumb
-                          season={season}
-                          className="aspect-[2/3] w-full rounded"
-                          alt={season.name}
-                        />
+                        {unreleased ? (
+                          <div className="relative overflow-hidden rounded border border-dashed border-border-interactive">
+                            <SeasonThumb
+                              season={season}
+                              className="aspect-[2/3] w-full opacity-55"
+                              alt={season.name}
+                            />
+                            <UnreleasedTag className="absolute top-1 left-1" />
+                          </div>
+                        ) : (
+                          <SeasonThumb
+                            season={season}
+                            className="aspect-[2/3] w-full rounded"
+                            alt={season.name}
+                          />
+                        )}
                         <p
                           className="line-clamp-2 text-xs font-medium leading-tight"
                           title={season.name}
@@ -295,14 +310,21 @@ export function AnimeDetailDialog({
                           {season.name}
                         </p>
                         <p className="text-[10px] text-muted-foreground">
-                          {[
-                            season.type,
-                            season.year,
-                            typeof season.malScore === "number" &&
-                              `MAL ${season.malScore.toFixed(2)}`,
-                          ]
-                            .filter(Boolean)
-                            .join(" · ")}
+                          {unreleased ? (
+                            <>
+                              {formatReleaseDate(season.releaseDate, season.releasePrecision)}
+                              <span className="block">não entra em média nem tempo</span>
+                            </>
+                          ) : (
+                            [
+                              season.type,
+                              season.year,
+                              typeof season.malScore === "number" &&
+                                `MAL ${season.malScore.toFixed(2)}`,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")
+                          )}
                           {excluded && <span className="block">fora da média</span>}
                         </p>
                       </div>

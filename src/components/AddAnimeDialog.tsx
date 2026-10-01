@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { JikanSearch, type JikanPick } from "@/components/JikanSearch";
+import { UnreleasedTag } from "@/components/UnreleasedTag";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,6 +19,8 @@ import { Progress } from "@/components/ui/progress";
 import {
   type Anime,
   type CreateAnimeInput,
+  formatReleaseDate,
+  isNotYetAired,
   primarySeasonIndex,
   seasonFromChain,
 } from "@/lib/anime-storage";
@@ -269,8 +272,17 @@ export function AddAnimeDialog({ open, onOpenChange, animes, onCreate }: AddAnim
                         className="min-w-0 flex-1 cursor-pointer text-sm"
                       >
                         <span className="block">{season.title}</span>
-                        <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-                          {season.year != null && <span>{season.year}</span>}
+                        <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          {isNotYetAired(season.status) ? (
+                            <>
+                              <UnreleasedTag />
+                              <span>
+                                {formatReleaseDate(season.releaseDate, season.releasePrecision)}
+                              </span>
+                            </>
+                          ) : (
+                            season.year != null && <span>{season.year}</span>
+                          )}
                           {season.type && (
                             <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
                               {season.type}
