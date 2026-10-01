@@ -13,12 +13,15 @@ import {
   formatReleaseLabel,
   isAwardWinning,
   isExcludedFromAverage,
+  isNotYetAired,
   isUnreleased,
   mediaMAL,
   mergeLegacyUpcoming,
   nextRelease,
   parseJikanDuration,
+  primarySeasonIndex,
   releasedSeasons,
+  seasonFromChain,
   selectUpcomingStrip,
   seasonMinutes,
   tierFromAverage,
@@ -27,6 +30,7 @@ import {
   type Season,
   type UpcomingSeason,
 } from "./anime-storage";
+import type { ChainSeason } from "./jikan-chain";
 
 function season(overrides: Partial<Season> = {}): Season {
   return { id: "season-1", name: "Temporada 1", ...overrides };
@@ -559,5 +563,92 @@ describe("nextRelease", () => {
       nextRelease(anime({ upcoming: { title: "Legado", releaseDate: "2027-04-01" } })),
     ).toEqual({ title: "Legado", releaseDate: "2027-04-01", imageUrl: null, seasonId: null });
     expect(nextRelease(anime())).toBeNull();
+  });
+});
+
+describe("isNotYetAired", () => {
+  it("reconhece o status de anunciado da Jikan", () => {
+    expect(isNotYetAired("Not yet aired")).toBe(true);
+    expect(isNotYetAired("Finished Airing")).toBe(false);
+    expect(isNotYetAired("Currently Airing")).toBe(false);
+    expect(isNotYetAired(null)).toBe(false);
+  });
+});
+
+describe("seasonFromChain", () => {
+  const chain = (overrides: Partial<ChainSeason> = {}): ChainSeason => ({
+    malId: 10,
+    title: "Temporada 2",
+    year: 2027,
+    malScore: 8.1,
+    imageUrl: "https://cdn/x.jpg",
+    type: "TV",
+    status: "Finished Airing",
+    airedFrom: "2027-01-08T00:00:00+00:00",
+    genres: ["Action"],
+    episodes: 12,
+    durationMin: 24,
+    releaseDate: "2027-01-08",
+    releasePrecision: "day",
+    ...overrides,
+  });
+
+  it("lançada sai no formato de sempre, sem campos de estreia", () => {
+    const result = seasonFromChain(chain(), () => "id-1");
+    expect(result).toEqual({
+      id: "id-1",
+      name: "Temporada 2",
+      malId: 10,
+      year: 2027,
+      malScore: 8.1,
+      type: "TV",
+      episodes: 12,
+      durationMin: 24,
+      imageUrl: "https://cdn/x.jpg",
+    });
+    expect(result).not.toHaveProperty("unreleased");
+    expect(result).not.toHaveProperty("releaseDate");
+    expect(result).not.toHaveProperty("releasePrecision");
+  });
+
+  it("não lançada leva a data e a precisão", () => {
+    const result = seasonFromChain(
+      chain({ status: "Not yet aired", releaseDate: "2027-04-01", releasePrecision: "month" }),
+      () => "id-2",
+    );
+    expect(result).toMatchObject({
+      id: "id-2",
+      unreleased: true,
+      releaseDate: "2027-04-01",
+      releasePrecision: "month",
+    });
+  });
+
+  it("não lançada sem data entra com data nula", () => {
+    const result = seasonFromChain(
+      chain({ status: "Not yet aired", imageUrl: null, releaseDate: null, releasePrecision: null }),
+      () => "id-3",
+    );
+    expect(result).toMatchObject({
+      unreleased: true,
+      releaseDate: null,
+      releasePrecision: null,
+      imageUrl: null,
+    });
+  });
+});
+
+describe("primarySeasonIndex", () => {
+  it("pula as não lançadas", () => {
+    expect(primarySeasonIndex([season({ id: "a", unreleased: true }), season({ id: "b" })])).toBe(
+      1,
+    );
+  });
+
+  it("usa a primeira quando todas são não lançadas ou a lista é vazia", () => {
+    expect(primarySeasonIndex([season({ unreleased: true }), season({ unreleased: true })])).toBe(
+      0,
+    );
+    expect(primarySeasonIndex([])).toBe(0);
   });
 });

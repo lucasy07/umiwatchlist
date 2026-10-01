@@ -1,6 +1,8 @@
 import {
   createAnime,
   isExcludedFromAverage,
+  primarySeasonIndex,
+  seasonFromChain,
   setWatched,
   tierFromAverage,
   uid,
@@ -90,16 +92,24 @@ export async function parseMalExport(file: File): Promise<MalEntry[]> {
 }
 
 function seasonFrom(entry: MalEntry, detail?: ChainSeason): Season {
+  if (detail) {
+    return {
+      ...seasonFromChain(detail),
+      malId: entry.malId,
+      type: detail.type ?? entry.type,
+      episodes: detail.episodes ?? entry.episodes,
+    };
+  }
   return {
     id: uid(),
-    name: detail?.title ?? entry.title,
+    name: entry.title,
     malId: entry.malId,
-    year: detail?.year ?? null,
-    malScore: detail?.malScore ?? null,
-    type: detail?.type ?? entry.type,
-    episodes: detail?.episodes ?? entry.episodes,
-    durationMin: detail?.durationMin ?? null,
-    imageUrl: detail?.imageUrl ?? null,
+    year: null,
+    malScore: null,
+    type: entry.type,
+    episodes: entry.episodes,
+    durationMin: null,
+    imageUrl: null,
   };
 }
 
@@ -229,7 +239,8 @@ export async function runMalImport(
           entriesByAnime.set(updated.id, combined);
           onUpdated?.(updated);
         } else {
-          const first = ordered[0];
+          // Unreleased seasons never name the anime; seasons and ordered align here.
+          const first = ordered[primarySeasonIndex(seasons)];
           const firstDetail = details.get(first.malId);
           const created = await createAnime({
             name: firstDetail?.title ?? first.title,

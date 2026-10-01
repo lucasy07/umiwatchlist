@@ -43,6 +43,8 @@ const detail = (malId: number, overrides: Partial<ChainSeason> = {}): ChainSeaso
   genres: [],
   episodes: 12,
   durationMin: 24,
+  releaseDate: null,
+  releasePrecision: null,
   ...overrides,
 });
 
@@ -146,6 +148,45 @@ describe("runMalImport", () => {
     expect(mocks.updateTier).toHaveBeenCalledWith("anime-1", "A");
     expect(mocks.setWatched).toHaveBeenCalledWith("anime-1", true);
     expect(onUpdated).toHaveBeenCalledOnce();
+  });
+
+  it("marca a temporada anunciada como não lançada", async () => {
+    mocks.buildChain.mockResolvedValue([
+      detail(2, { status: "Not yet aired", releaseDate: "2027-04-01", releasePrecision: "month" }),
+    ]);
+    await runMalImport([entry(2, { status: "plan_to_watch", score: 0 })], []);
+    expect(mocks.createAnime).toHaveBeenCalledWith(
+      expect.objectContaining({
+        seasons: [
+          expect.objectContaining({
+            malId: 2,
+            unreleased: true,
+            releaseDate: "2027-04-01",
+            releasePrecision: "month",
+          }),
+        ],
+      }),
+    );
+  });
+
+  it("não usa a não lançada para nome e capa do anime", async () => {
+    mocks.buildChain.mockResolvedValue([
+      detail(1, { title: "Anunciada", imageUrl: "nova.jpg", status: "Not yet aired" }),
+      detail(2, { title: "Lançada", imageUrl: "velha.jpg", malScore: 8 }),
+    ]);
+    await runMalImport([entry(1, { status: "watching", score: 0 }), entry(2)], []);
+    expect(mocks.createAnime).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Lançada",
+        cover: "velha.jpg",
+        malId: 2,
+        malScore: 8,
+        seasons: [
+          expect.objectContaining({ malId: 1, unreleased: true }),
+          expect.objectContaining({ malId: 2 }),
+        ],
+      }),
+    );
   });
 
   it("continua após erro numa franquia e retorna parcial no cancelamento", async () => {

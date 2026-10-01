@@ -2,7 +2,7 @@
 // fetches details for each related entry. Used to import an entire series
 // as one anime grouped by its seasons.
 
-import { parseJikanDuration } from "@/lib/anime-storage";
+import { isValidIsoDate, parseJikanDuration, type ReleasePrecision } from "@/lib/anime-storage";
 import { getJikanAnime, getJikanRelations, type JikanAnimeDetails } from "@/lib/jikan-client";
 
 export type ChainSeason = {
@@ -17,7 +17,32 @@ export type ChainSeason = {
   genres: string[];
   episodes: number | null;
   durationMin: number | null;
+  /** Premiere date (ISO YYYY-MM-DD), padded per `releasePrecision`. */
+  releaseDate: string | null;
+  releasePrecision: ReleasePrecision | null;
 };
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/**
+ * Premiere date from Jikan's `aired`. Built from `prop.from` parts, never from the UTC
+ * `aired.from`; that one is only a fallback (with unknown precision) when `prop` is missing.
+ */
+export function deriveReleaseDate(aired: JikanAnimeDetails["aired"]): {
+  releaseDate: string | null;
+  releasePrecision: ReleasePrecision | null;
+} {
+  const parts = aired?.prop?.from;
+  if (parts) {
+    const { year, month, day } = parts;
+    if (year == null) return { releaseDate: null, releasePrecision: null };
+    if (month == null) return { releaseDate: `${year}-01-01`, releasePrecision: "year" };
+    if (day == null) return { releaseDate: `${year}-${pad(month)}-01`, releasePrecision: "month" };
+    return { releaseDate: `${year}-${pad(month)}-${pad(day)}`, releasePrecision: "day" };
+  }
+  const fallback = aired?.from?.slice(0, 10);
+  return { releaseDate: isValidIsoDate(fallback) ? fallback : null, releasePrecision: null };
+}
 
 const KEEP_TYPES = new Set(["TV", "ONA", "Movie", "OVA", "Special", "TV Special"]);
 const MAX_ENTRIES = 15;
@@ -107,6 +132,7 @@ export async function buildChain(
         type: d.type,
         status: d.status ?? null,
         airedFrom: d.aired?.from ?? null,
+        ...deriveReleaseDate(d.aired),
         episodes: d.episodes ?? null,
         durationMin: parseJikanDuration(d.duration),
         genres: [

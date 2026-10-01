@@ -1,4 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { ChainSeason } from "@/lib/jikan-chain";
+
+export type ReleasePrecision = "day" | "month" | "year";
 
 export type Season = {
   id: string;
@@ -23,11 +26,46 @@ export type Season = {
   /** Estreia prevista (ISO YYYY-MM-DD). */
   releaseDate?: string | null;
   /** Precisão de `releaseDate`. null/ausente = desconhecida. */
-  releasePrecision?: "day" | "month" | "year" | null;
+  releasePrecision?: ReleasePrecision | null;
 };
 
 export function isUnreleased(season: Season): boolean {
   return season.unreleased === true;
+}
+
+/** Jikan/MAL status of an announced entry ("Not yet aired"). */
+export function isNotYetAired(status: string | null | undefined): boolean {
+  return typeof status === "string" && status.toLowerCase().includes("not yet");
+}
+
+/** The single ChainSeason → Season conversion. Released seasons carry no release fields. */
+export function seasonFromChain(s: ChainSeason, makeId: () => string = uid): Season {
+  const season: Season = {
+    id: makeId(),
+    name: s.title,
+    malId: s.malId,
+    year: s.year,
+    malScore: s.malScore,
+    type: s.type,
+    episodes: s.episodes,
+    durationMin: s.durationMin,
+    imageUrl: s.imageUrl ?? null,
+  };
+  if (!isNotYetAired(s.status)) return season;
+  return {
+    ...season,
+    unreleased: true,
+    releaseDate: s.releaseDate,
+    releasePrecision: s.releasePrecision,
+  };
+}
+
+/** Season that names the anime (name, cover, score): the first released one, else the first. */
+export function primarySeasonIndex(seasons: Season[]): number {
+  return Math.max(
+    0,
+    seasons.findIndex((s) => !isUnreleased(s)),
+  );
 }
 
 /** Só as temporadas lançadas. Devolve o mesmo array quando não há não lançadas. */

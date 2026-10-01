@@ -15,7 +15,12 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { type Anime, type CreateAnimeInput, type Season, uid } from "@/lib/anime-storage";
+import {
+  type Anime,
+  type CreateAnimeInput,
+  primarySeasonIndex,
+  seasonFromChain,
+} from "@/lib/anime-storage";
 import { buildChain, type ChainSeason } from "@/lib/jikan-chain";
 
 type AddAnimeDialogProps = {
@@ -84,6 +89,8 @@ export function AddAnimeDialog({ open, onOpenChange, animes, onCreate }: AddAnim
                 genres: [],
                 episodes: null,
                 durationMin: null,
+                releaseDate: null,
+                releasePrecision: null,
               },
             ];
       setChainSeasons(finalSeasons);
@@ -123,19 +130,9 @@ export function AddAnimeDialog({ open, onOpenChange, animes, onCreate }: AddAnim
         toast.error("Esse anime já está na sua lista");
         return;
       }
-      const first = selected[0];
+      const seasons = selected.map((season) => seasonFromChain(season));
+      const first = selected[primarySeasonIndex(seasons)];
       if (!first) return;
-      const seasons: Season[] = selected.map((season) => ({
-        id: uid(),
-        name: season.title,
-        malId: season.malId,
-        year: season.year,
-        malScore: season.malScore,
-        type: season.type,
-        episodes: season.episodes,
-        durationMin: season.durationMin,
-        imageUrl: season.imageUrl ?? null,
-      }));
       const payload: CreateAnimeInput = {
         name: first.title,
         cover: first.imageUrl ?? undefined,

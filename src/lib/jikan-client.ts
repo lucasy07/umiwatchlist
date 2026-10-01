@@ -16,7 +16,13 @@ export type JikanAnimeDetails = {
   status: string | null;
   year: number | null;
   score: number | null;
-  aired?: { from?: string | null } | null;
+  aired?: {
+    from?: string | null;
+    /** Date parts in MAL's own calendar (no timezone shift); any part may be null. */
+    prop?: {
+      from?: { day: number | null; month: number | null; year: number | null } | null;
+    } | null;
+  } | null;
   episodes?: number | null;
   duration?: string | null;
   images?: {
