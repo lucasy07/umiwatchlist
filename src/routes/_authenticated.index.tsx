@@ -87,7 +87,7 @@ import {
   releasedSeasons,
   formatReleaseDate,
   formatReleaseRelative,
-  isVaguePrecision,
+  isVagueEntry,
   rankColor,
   formatLastChecked,
   allGenres,
@@ -2015,7 +2015,7 @@ function Index() {
                           {next && (
                             <span
                               className={`absolute left-2 top-11 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold shadow-lg ${
-                                isVaguePrecision(next.releasePrecision)
+                                isVagueEntry(next)
                                   ? "border border-(--border-strong) bg-card-elevated text-foreground"
                                   : "bg-primary text-primary-foreground"
                               }`}
@@ -2275,7 +2275,7 @@ function Index() {
                         {next && (
                           <span
                             className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                              isVaguePrecision(next.releasePrecision)
+                              isVagueEntry(next)
                                 ? "bg-card-elevated text-muted-foreground"
                                 : "bg-primary/15 text-primary"
                             }`}
@@ -2364,7 +2364,7 @@ function Index() {
                         {next && (
                           <div
                             className={`mt-3 flex items-center justify-between gap-2 rounded-lg border px-3 py-2 ${
-                              isVaguePrecision(next.releasePrecision)
+                              isVagueEntry(next)
                                 ? "border-border bg-card-elevated/50"
                                 : "border-primary/20 bg-primary/5"
                             }`}
@@ -2372,9 +2372,7 @@ function Index() {
                             <div className="min-w-0">
                               <div
                                 className={`flex items-center gap-1.5 text-xs font-semibold ${
-                                  isVaguePrecision(next.releasePrecision)
-                                    ? "text-foreground"
-                                    : "text-primary"
+                                  isVagueEntry(next) ? "text-foreground" : "text-primary"
                                 }`}
                               >
                                 <CalendarClock className="h-3.5 w-3.5" />

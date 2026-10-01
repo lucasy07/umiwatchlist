@@ -646,22 +646,27 @@ export function mergeLegacyUpcoming(
 /** A scheduled premiere: an unreleased season (`seasonId`) or the legacy `upcoming` (`seasonId: null`). */
 export type UpcomingEntry = {
   title: string;
-  releaseDate: string;
+  /** null = announced without a date (unreleased seasons only; the legacy always has one). */
+  releaseDate: string | null;
   /** null = unknown (legacy or fallback), treated as day. */
   releasePrecision: ReleasePrecision | null;
   imageUrl: string | null;
   seasonId: string | null;
 };
 
-/** Scheduled premieres of an anime with a valid date. The legacy `upcoming` is skipped when a season already covers it. */
+/**
+ * Scheduled premieres of an anime: every unreleased season (without a valid date it comes as
+ * `releaseDate: null`) and the legacy `upcoming` when it has a valid date not covered by a season.
+ */
 export function upcomingEntries(anime: Anime): UpcomingEntry[] {
   const entries: UpcomingEntry[] = [];
   for (const s of anime.seasons) {
-    if (!isUnreleased(s) || !isValidIsoDate(s.releaseDate)) continue;
+    if (!isUnreleased(s)) continue;
+    const dated = isValidIsoDate(s.releaseDate);
     entries.push({
       title: s.name,
-      releaseDate: s.releaseDate,
-      releasePrecision: s.releasePrecision ?? null,
+      releaseDate: dated ? s.releaseDate! : null,
+      releasePrecision: dated ? (s.releasePrecision ?? null) : null,
       imageUrl: s.imageUrl ?? null,
       seasonId: s.id,
     });
@@ -679,27 +684,40 @@ export function upcomingEntries(anime: Anime): UpcomingEntry[] {
   return entries;
 }
 
-/** Earliest scheduled premiere of an anime, or null. */
+/** Earliest dated premiere of an anime; an undated one only when none has a date; else null. */
 export function nextRelease(anime: Anime): UpcomingEntry | null {
   let next: UpcomingEntry | null = null;
   for (const entry of upcomingEntries(anime)) {
-    if (!next || entry.releaseDate < next.releaseDate) next = entry;
+    if (!next) next = entry;
+    else if (entry.releaseDate !== null) {
+      if (next.releaseDate === null || entry.releaseDate < next.releaseDate) next = entry;
+    }
   }
   return next;
 }
 
-export type UpcomingStripItem = { anime: Anime; entry: UpcomingEntry; days: number };
+/** `days` is null for an entry announced without a date. */
+export type UpcomingStripItem = { anime: Anime; entry: UpcomingEntry; days: number | null };
 
 /** Month or year precision: the exact day is unknown, so no day countdown. */
 export function isVaguePrecision(precision: ReleasePrecision | null | undefined): boolean {
   return precision === "month" || precision === "year";
 }
 
-/** Release label at its precision: "Amanhã" / "Em 12 dias" for a day, "out. de 2027" / "2027" otherwise. */
+/** Undated, month or year: no day countdown and no "soon" or "premiered" state. */
+export function isVagueEntry(entry: UpcomingEntry): boolean {
+  return entry.releaseDate === null || isVaguePrecision(entry.releasePrecision);
+}
+
+/**
+ * Release label at its precision: "Amanhã" / "Em 12 dias" for a day, "out. de 2027" / "2027"
+ * for month/year, "Anunciada" without a date.
+ */
 export function formatReleaseRelative(
-  dateStr: string,
+  dateStr: string | null,
   precision: ReleasePrecision | null | undefined,
 ): string {
+  if (dateStr === null) return "Anunciada";
   return isVaguePrecision(precision)
     ? formatReleaseDate(dateStr, precision)
     : formatReleaseLabel(dateStr);
@@ -723,11 +741,17 @@ export function releasePeriodEnd(
 /**
  * Scheduled seasons for the "Em breve" strip, soonest first. Day precision stays up to
  * UPCOMING_RECENT_DAYS after release; month/year precision stays until the period ends.
+ * Undated ones always stay, after every dated one, by anime then season name.
  */
 export function selectUpcomingStrip(animes: Anime[]): UpcomingStripItem[] {
   const items: UpcomingStripItem[] = [];
+  const undated: UpcomingStripItem[] = [];
   for (const anime of animes) {
     for (const entry of upcomingEntries(anime)) {
+      if (entry.releaseDate === null) {
+        undated.push({ anime, entry, days: null });
+        continue;
+      }
       const days = daysUntil(entry.releaseDate);
       if (days === null) continue;
       if (isVaguePrecision(entry.releasePrecision)) {
@@ -739,7 +763,13 @@ export function selectUpcomingStrip(animes: Anime[]): UpcomingStripItem[] {
       items.push({ anime, entry, days });
     }
   }
-  return items.sort((a, b) => a.days - b.days);
+  items.sort((a, b) => a.days! - b.days!);
+  undated.sort(
+    (a, b) =>
+      a.anime.name.localeCompare(b.anime.name, "pt-BR") ||
+      a.entry.title.localeCompare(b.entry.title, "pt-BR"),
+  );
+  return [...items, ...undated];
 }
 
 export async function updateLastCheckedAt(id: string, iso: string): Promise<void> {

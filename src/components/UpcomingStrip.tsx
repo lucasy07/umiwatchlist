@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Image as ImageIcon } from "lucide-react";
 import {
   formatDateBR,
   formatReleaseRelative,
-  isVaguePrecision,
+  isVagueEntry,
   selectUpcomingStrip,
   type Anime,
   type UpcomingStripItem,
@@ -21,7 +21,7 @@ const SOON_DAYS = 7;
 
 function itemTone({ entry, days }: UpcomingStripItem): "released" | "soon" | "later" | "vague" {
   // Only a known day can be counted down, highlighted or marked as premiered.
-  if (isVaguePrecision(entry.releasePrecision)) return "vague";
+  if (days === null || isVagueEntry(entry)) return "vague";
   if (days < 0) return "released";
   if (days <= SOON_DAYS) return "soon";
   return "later";
@@ -41,10 +41,23 @@ const LABEL_TONE = {
   vague: "text-muted-foreground",
 } as const;
 
+/** "2 temporadas agendadas", "1 temporada anunciada" or "2 agendadas · 6 anunciadas". */
+function stripCountLabel(scheduled: number, announced: number): string {
+  const part = (n: number, word: string, withNoun: boolean) =>
+    `${n} ${withNoun ? (n === 1 ? "temporada " : "temporadas ") : ""}${word}${n === 1 ? "" : "s"}`;
+  if (scheduled > 0 && announced > 0) {
+    return `${part(scheduled, "agendada", false)} · ${part(announced, "anunciada", false)}`;
+  }
+  return scheduled > 0 ? part(scheduled, "agendada", true) : part(announced, "anunciada", true);
+}
+
 export function UpcomingStrip({ animes, onOpen }: UpcomingStripProps) {
   const titleId = useId();
   const items = useMemo(() => selectUpcomingStrip(animes), [animes]);
-  const scheduled = items.filter((item) => itemTone(item) !== "released").length;
+  const announced = items.filter((item) => item.entry.releaseDate === null).length;
+  const scheduled = items.filter(
+    (item) => item.entry.releaseDate !== null && itemTone(item) !== "released",
+  ).length;
   const trackRef = useRef<HTMLUListElement>(null);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(true);
@@ -81,9 +94,9 @@ export function UpcomingStrip({ animes, onOpen }: UpcomingStripProps) {
       <div className="mb-2.5 flex items-center justify-between gap-3">
         <h2 id={titleId} className="font-display text-[17px] font-bold tracking-tight">
           Em breve
-          {scheduled > 0 && (
+          {(scheduled > 0 || announced > 0) && (
             <span className="ml-2.5 font-sans text-xs font-normal text-muted-foreground">
-              {scheduled === 1 ? "1 temporada agendada" : `${scheduled} temporadas agendadas`}
+              {stripCountLabel(scheduled, announced)}
             </span>
           )}
         </h2>
@@ -120,10 +133,14 @@ export function UpcomingStrip({ animes, onOpen }: UpcomingStripProps) {
             : "[mask-image:linear-gradient(to_right,var(--background)_calc(100%-2.5rem),transparent)]"
         }`}
       >
-        {items.map((item) => (
+        {items.map((item, index) => (
           <UpcomingStripEntry
             key={`${item.anime.id}:${item.entry.seasonId ?? "legado"}`}
             item={item}
+            // From the last dated item on, the rail position is no longer a date.
+            dashedRail={
+              item.entry.releaseDate === null || items[index + 1]?.entry.releaseDate === null
+            }
             onOpen={onOpen}
           />
         ))}
@@ -134,15 +151,17 @@ export function UpcomingStrip({ animes, onOpen }: UpcomingStripProps) {
 
 function UpcomingStripEntry({
   item,
+  dashedRail,
   onOpen,
 }: {
   item: UpcomingStripItem;
+  dashedRail: boolean;
   onOpen: (animeId: string) => void;
 }) {
   const { anime, entry } = item;
   const tone = itemTone(item);
   const label = formatReleaseRelative(entry.releaseDate, entry.releasePrecision);
-  const exactDay = tone !== "vague";
+  const exactDate = tone === "vague" ? null : entry.releaseDate;
   const cover = entry.imageUrl ?? anime.cover ?? anime.imageUrl;
 
   return (
@@ -150,10 +169,18 @@ function UpcomingStripEntry({
       <button
         type="button"
         onClick={() => onOpen(anime.id)}
-        aria-label={`${entry.title}, ${anime.name}, ${label}${exactDay ? `, ${formatDateBR(entry.releaseDate)}` : ""}`}
+        aria-label={`${entry.title}, ${anime.name}, ${
+          entry.releaseDate === null ? "anunciada, sem data" : label
+        }${exactDate ? `, ${formatDateBR(exactDate)}` : ""}`}
         className="focus-ring group/button block w-32 rounded-lg pr-3 text-left sm:w-38 sm:pr-4"
       >
-        <div className="relative flex h-7 items-center gap-1 before:absolute before:top-1/2 before:left-0 before:-right-3 before:h-px before:bg-(--border-strong) group-last/item:before:right-0 sm:before:-right-4">
+        <div
+          className={`relative flex h-7 items-center gap-1 before:absolute before:top-1/2 before:left-0 before:-right-3 group-last/item:before:right-0 sm:before:-right-4 ${
+            dashedRail
+              ? "before:h-0 before:border-t before:border-dashed before:border-(--border-strong)"
+              : "before:h-px before:bg-(--border-strong)"
+          }`}
+        >
           <span
             aria-hidden="true"
             className={`relative size-2.5 shrink-0 rounded-full ring-4 ring-background ${DOT_TONE[tone]}`}
@@ -178,9 +205,9 @@ function UpcomingStripEntry({
               Estreou
             </span>
           )}
-          {exactDay && (
+          {exactDate && (
             <span className="absolute bottom-1.5 left-1.5 rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-bold text-foreground backdrop-blur-sm">
-              {formatDateBR(entry.releaseDate, { year: false })}
+              {formatDateBR(exactDate, { year: false })}
             </span>
           )}
         </div>

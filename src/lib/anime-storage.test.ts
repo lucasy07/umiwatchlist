@@ -12,6 +12,7 @@ import {
   formatMinutes,
   formatReleaseDate,
   formatReleaseRelative,
+  upcomingEntries,
   formatReleaseLabel,
   isAwardWinning,
   isExcludedFromAverage,
@@ -510,7 +511,8 @@ describe("selectUpcomingStrip", () => {
       }),
       anime({ id: "b", seasons: [unreleased("b-amanha", "2026-09-17")] }),
     ]);
-    expect(items.map((i) => i.entry.seasonId)).toEqual(["b-amanha", "a-futuro"]);
+    // The undated one now comes last, as "Anunciada".
+    expect(items.map((i) => i.entry.seasonId)).toEqual(["b-amanha", "a-futuro", "a-sem-data"]);
     expect(items[1].entry).toEqual({
       title: "a-futuro nome",
       releaseDate: "2027-01-10",
@@ -870,5 +872,48 @@ describe("selectUpcomingStrip com precisão", () => {
     expect(formatReleaseRelative(item.entry.releaseDate, item.entry.releasePrecision)).toBe(
       "set. de 2026",
     );
+  });
+});
+
+describe("temporadas anunciadas sem data", () => {
+  const today = () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 8, 16, 12));
+  };
+  const undated = (id: string, name = `${id} nome`) =>
+    season({ id, name, unreleased: true, releaseDate: null, releasePrecision: null });
+  const dated = (id: string, releaseDate: string) =>
+    season({ id, name: `${id} nome`, unreleased: true, releaseDate });
+
+  it("upcomingEntries inclui a sem data e o legado sem data válida continua fora", () => {
+    expect(upcomingEntries(anime({ seasons: [undated("x")] }))).toEqual([
+      { title: "x nome", releaseDate: null, releasePrecision: null, imageUrl: null, seasonId: "x" },
+    ]);
+    expect(upcomingEntries(anime({ upcoming: { title: "Legado", releaseDate: "" } }))).toEqual([]);
+  });
+
+  it("nextRelease prefere a com data e cai para a sem data quando é a única", () => {
+    expect(
+      nextRelease(anime({ seasons: [undated("x"), dated("y", "2027-02-01")] }))?.seasonId,
+    ).toBe("y");
+    expect(nextRelease(anime({ seasons: [undated("x"), undated("z")] }))?.seasonId).toBe("x");
+  });
+
+  it("selectUpcomingStrip põe as sem data no fim, em ordem alfabética estável", () => {
+    today();
+    const list = [
+      anime({ id: "zeta", name: "Zeta", seasons: [undated("z1")] }),
+      anime({ id: "alfa", name: "Alfa", seasons: [undated("a2", "B"), undated("a1", "A")] }),
+      anime({ id: "data", name: "Data", seasons: [dated("d1", "2026-12-01")] }),
+      anime({ id: "cedo", name: "Cedo", seasons: [dated("c1", "2026-09-20")] }),
+    ];
+    const order = (animes: Anime[]) => selectUpcomingStrip(animes).map((i) => i.entry.seasonId);
+    expect(order(list)).toEqual(["c1", "d1", "a1", "a2", "z1"]);
+    expect(order([...list].reverse())).toEqual(["c1", "d1", "a1", "a2", "z1"]);
+    expect(selectUpcomingStrip(list).map((i) => i.days)).toEqual([4, 76, null, null, null]);
+  });
+
+  it("rótulo sem data é Anunciada", () => {
+    expect(formatReleaseRelative(null, null)).toBe("Anunciada");
   });
 });
