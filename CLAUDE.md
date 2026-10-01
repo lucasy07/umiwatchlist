@@ -62,5 +62,6 @@ Antes de encerrar uma tarefa: `bun run test` e `bun run build` passando, sem err
 - **Tiers:** S A B C D E (E é o pior). `TIER_VALUE = {S:5,A:4,B:3,C:2,D:1,E:0}` — não reindexar.
 - **Cor dos tiers:** rampa oklch azul→magenta, `--tier-s` (h 220) a `--tier-e` (h 358), texto `--tier-foreground`. Aplicada via `tierColor`/`tierBg` em `TierPicker.tsx`. Não usar paleta dourada.
 - **OVA/Special:** importados, podem ser canônicos, ficam **fora da média** por padrão (`includeInAverage` sobrescreve por temporada), mas **contam** no tempo assistido.
+- **Não lançadas:** temporadas anunciadas vivem em `seasons` com `unreleased: true`, `releaseDate` (ISO) e `releasePrecision`; ficam **fora de todos os cálculos** (média, tempo, estatísticas, contagem). A faixa "Em breve" e os badges leem delas (`upcomingEntries`/`nextRelease`). `upcoming` é legado: o backfill o converte a cada load até a verificação gravar direto em `seasons`.
 - **Ranking:** toggle `scoreMode` `"mal" | "gosto"`. MAL ordena por média MAL; Meu gosto agrupa por tier como tierlist, só com animes `watched`.
 - **Ordem dentro da tier:** manual por drag & drop (`tierPosition`); `created_at` é fallback quando `tierPosition` é null. Sem ordenação numérica automática.

@@ -116,7 +116,11 @@ export function UpcomingStrip({ animes, onOpen }: UpcomingStripProps) {
         }`}
       >
         {items.map((item) => (
-          <UpcomingStripEntry key={item.anime.id} item={item} onOpen={onOpen} />
+          <UpcomingStripEntry
+            key={`${item.anime.id}:${item.entry.seasonId ?? "legado"}`}
+            item={item}
+            onOpen={onOpen}
+          />
         ))}
       </ul>
     </section>
@@ -124,22 +128,22 @@ export function UpcomingStrip({ animes, onOpen }: UpcomingStripProps) {
 }
 
 function UpcomingStripEntry({
-  item: { anime, upcoming, days },
+  item: { anime, entry, days },
   onOpen,
 }: {
   item: UpcomingStripItem;
   onOpen: (animeId: string) => void;
 }) {
   const tone = itemTone(days);
-  const label = formatReleaseLabel(upcoming.releaseDate);
-  const cover = anime.cover ?? anime.imageUrl;
+  const label = formatReleaseLabel(entry.releaseDate);
+  const cover = entry.imageUrl ?? anime.cover ?? anime.imageUrl;
 
   return (
     <li className="group/item shrink-0 snap-start">
       <button
         type="button"
         onClick={() => onOpen(anime.id)}
-        aria-label={`${upcoming.title}, ${anime.name}, ${label}, ${formatDateBR(upcoming.releaseDate)}`}
+        aria-label={`${entry.title}, ${anime.name}, ${label}, ${formatDateBR(entry.releaseDate)}`}
         className="focus-ring group/button block w-32 rounded-lg pr-3 text-left sm:w-38 sm:pr-4"
       >
         <div className="relative flex h-7 items-center gap-1 before:absolute before:top-1/2 before:left-0 before:-right-3 before:h-px before:bg-(--border-strong) group-last/item:before:right-0 sm:before:-right-4">
@@ -168,12 +172,12 @@ function UpcomingStripEntry({
             </span>
           )}
           <span className="absolute bottom-1.5 left-1.5 rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-bold text-foreground backdrop-blur-sm">
-            {formatDateBR(upcoming.releaseDate, { year: false })}
+            {formatDateBR(entry.releaseDate, { year: false })}
           </span>
         </div>
 
         <div className="mt-2 line-clamp-2 font-display text-[13px] leading-tight font-bold">
-          {upcoming.title}
+          {entry.title}
         </div>
         <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{anime.name}</div>
       </button>

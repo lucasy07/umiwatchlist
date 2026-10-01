@@ -8,6 +8,7 @@ import {
   seasonMinutes,
   animeMinutes,
   formatMinutes,
+  withReleasedSeasons,
 } from "@/lib/anime-storage";
 import { useAuth } from "@/auth/AuthProvider";
 import { useAvatarSrc } from "@/hooks/use-avatar-src";
@@ -53,12 +54,14 @@ type Stats = {
   avgEpisodeDuration: number | null;
 };
 
-export function StatsDialog({ animes, open, onOpenChange }: StatsDialogProps) {
+export function StatsDialog({ animes: allAnimes, open, onOpenChange }: StatsDialogProps) {
   const { user, profile } = useAuth();
   const avatarSrc = useAvatarSrc(profile?.avatar_url);
 
   // All calculations are based on the entire collection, never the filtered view.
+  // Unreleased seasons stay out of every metric.
   const stats = useMemo<Stats>(() => {
+    const animes = allAnimes.map(withReleasedSeasons);
     const total = animes.length;
     const watchedCount = animes.filter((a) => a.watched).length;
     const queuedCount = total - watchedCount;
@@ -252,7 +255,7 @@ export function StatsDialog({ animes, open, onOpenChange }: StatsDialogProps) {
       avgEpisodesPerSeason: epsSeasons === 0 ? null : epsSum / epsSeasons,
       avgEpisodeDuration: weightedEpisodes === 0 ? null : weightedDurationSum / weightedEpisodes,
     };
-  }, [animes]);
+  }, [allAnimes]);
 
   const createdAt = user?.created_at ? new Date(user.created_at) : null;
   const displayName = profile?.username ?? user?.email ?? "—";

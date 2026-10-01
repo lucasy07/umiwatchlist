@@ -82,6 +82,8 @@ import {
   importLegacyIfNeeded,
   uid,
   mediaMAL,
+  nextRelease,
+  releasedSeasons,
   rankColor,
   formatReleaseLabel,
   formatDateBR,
@@ -451,7 +453,7 @@ function Index() {
     const wantedTypes = new Set([...typeFilter].map((t) => t.toLowerCase()));
     if (
       wantedTypes.size > 0 &&
-      !a.seasons.some((s) => s.type && wantedTypes.has(s.type.toLowerCase()))
+      !releasedSeasons(a.seasons).some((s) => s.type && wantedTypes.has(s.type.toLowerCase()))
     ) {
       return false;
     }
@@ -1930,6 +1932,8 @@ function Index() {
             <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
               {displayedRanked.map((anime, idx) => {
                 const malAvg = mediaMAL(anime.seasons);
+                const next = nextRelease(anime);
+                const seasonCount = releasedSeasons(anime.seasons).length;
                 const primaryValue = malAvg != null ? malAvg.toFixed(2) : "—";
                 const primaryColor = malAvg != null ? rankColor(malAvg) : "text-muted-foreground";
                 return (
@@ -2006,10 +2010,10 @@ function Index() {
                               <Award className="h-3.5 w-3.5" />
                             </div>
                           )}
-                          {anime.upcoming?.releaseDate && (
+                          {next && (
                             <span className="absolute left-2 top-11 inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground shadow-lg">
                               <CalendarClock className="h-3 w-3" />
-                              {formatReleaseLabel(anime.upcoming.releaseDate)}
+                              {formatReleaseLabel(next.releaseDate)}
                             </span>
                           )}
                           <div
@@ -2019,8 +2023,7 @@ function Index() {
                               {anime.name}
                             </h3>
                             <p className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-                              {anime.seasons.length}{" "}
-                              {anime.seasons.length === 1 ? "temporada" : "temporadas"}
+                              {seasonCount} {seasonCount === 1 ? "temporada" : "temporadas"}
                             </p>
                           </div>
                         </div>
@@ -2149,6 +2152,8 @@ function Index() {
             <ul className="grid gap-4">
               {displayedRanked.map((anime, idx) => {
                 const malAvg = mediaMAL(anime.seasons);
+                const next = nextRelease(anime);
+                const seasonCount = releasedSeasons(anime.seasons).length;
                 const primaryValue = malAvg != null ? malAvg.toFixed(2) : "—";
                 const primaryColor = malAvg != null ? rankColor(malAvg) : "text-muted-foreground";
                 const isOpen = expanded[anime.id] ?? false;
@@ -2257,13 +2262,12 @@ function Index() {
                           {tierBadge}
                         </div>
                         <p className="mt-0.5 text-[11px] uppercase tracking-wider text-muted-foreground">
-                          {anime.seasons.length}{" "}
-                          {anime.seasons.length === 1 ? "temporada" : "temporadas"}
+                          {seasonCount} {seasonCount === 1 ? "temporada" : "temporadas"}
                         </p>
-                        {anime.upcoming?.releaseDate && (
+                        {next && (
                           <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary">
                             <CalendarClock className="h-3 w-3" />
-                            {formatReleaseLabel(anime.upcoming.releaseDate)}
+                            {formatReleaseLabel(next.releaseDate)}
                           </span>
                         )}
                         {(isAwardWinning(anime) || (anime.genres && anime.genres.length > 0)) && (
@@ -2343,21 +2347,25 @@ function Index() {
                             onDelete={(seasonId) => deleteSeason(anime.id, seasonId)}
                           />
                         )}
-                        {anime.upcoming?.releaseDate && (
+                        {next && (
                           <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
                                 <CalendarClock className="h-3.5 w-3.5" />
-                                {formatReleaseLabel(anime.upcoming.releaseDate)}
+                                {formatReleaseLabel(next.releaseDate)}
                               </div>
                               <p className="truncate text-[11px] text-muted-foreground">
-                                {anime.upcoming.title} • {formatDateBR(anime.upcoming.releaseDate)}
+                                {next.title} • {formatDateBR(next.releaseDate)}
                               </p>
                             </div>
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => clearUpcoming(anime.id)}
+                              onClick={() =>
+                                next.seasonId
+                                  ? deleteSeason(anime.id, next.seasonId)
+                                  : clearUpcoming(anime.id)
+                              }
                               className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
                               aria-label="Remover lançamento"
                             >

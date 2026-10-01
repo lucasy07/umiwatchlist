@@ -13,13 +13,19 @@ import {
   formatReleaseLabel,
   isAwardWinning,
   isExcludedFromAverage,
+  isUnreleased,
   mediaMAL,
+  mergeLegacyUpcoming,
+  nextRelease,
   parseJikanDuration,
+  releasedSeasons,
   selectUpcomingStrip,
   seasonMinutes,
   tierFromAverage,
+  withReleasedSeasons,
   type Anime,
   type Season,
+  type UpcomingSeason,
 } from "./anime-storage";
 
 function season(overrides: Partial<Season> = {}): Season {
@@ -103,6 +109,20 @@ describe("animeMinutes", () => {
     );
 
     expect(result).toEqual({ minutes: 275, episodes: 13, missing: 0 });
+  });
+
+  it("ignora não lançadas: nem somam nem contam como faltando", () => {
+    const result = animeMinutes(
+      anime({
+        seasons: [
+          season({ id: "1", episodes: 12, durationMin: 24 }),
+          season({ id: "2", unreleased: true, episodes: 12, durationMin: 24 }),
+          season({ id: "3", unreleased: true }),
+        ],
+      }),
+    );
+
+    expect(result).toEqual({ minutes: 288, episodes: 12, missing: 0 });
   });
 });
 
@@ -191,6 +211,116 @@ describe("mediaMAL", () => {
       ]),
     ).toBe(6);
   });
+
+  it("exclui não lançadas mesmo com nota", () => {
+    expect(
+      mediaMAL([
+        season({ type: "TV", malScore: 8 }),
+        season({ type: "TV", malScore: 2, unreleased: true }),
+      ]),
+    ).toBe(8);
+    expect(mediaMAL([season({ malScore: 9, unreleased: true })])).toBeNull();
+  });
+});
+
+describe("temporadas não lançadas", () => {
+  it("isUnreleased só vale com o marcador", () => {
+    expect(isUnreleased(season())).toBe(false);
+    expect(isUnreleased(season({ unreleased: false }))).toBe(false);
+    expect(isUnreleased(season({ unreleased: true }))).toBe(true);
+  });
+
+  it("releasedSeasons filtra e preserva a referência sem não lançadas", () => {
+    const released = [season({ id: "1" }), season({ id: "2" })];
+    expect(releasedSeasons(released)).toBe(released);
+    const mixed = [...released, season({ id: "3", unreleased: true })];
+    expect(releasedSeasons(mixed).map((s) => s.id)).toEqual(["1", "2"]);
+  });
+
+  it("withReleasedSeasons preserva o objeto sem não lançadas", () => {
+    const plain = anime({ seasons: [season()] });
+    expect(withReleasedSeasons(plain)).toBe(plain);
+    const mixed = anime({ seasons: [season(), season({ id: "u", unreleased: true })] });
+    expect(withReleasedSeasons(mixed).seasons).toHaveLength(1);
+    expect(mixed.seasons).toHaveLength(2);
+  });
+});
+
+describe("mergeLegacyUpcoming", () => {
+  const makeId = () => "novo";
+  const legacy = (overrides: Partial<UpcomingSeason> = {}): UpcomingSeason => ({
+    title: "Frieren 2nd Season",
+    releaseDate: "2027-01-10",
+    source: "auto",
+    malId: 100,
+    ...overrides,
+  });
+
+  it("descarta o legado quando a season de mesmo malId já foi lançada", () => {
+    const seasons = [season({ id: "a", malId: 100 })];
+    expect(mergeLegacyUpcoming(seasons, legacy(), makeId)).toBe(seasons);
+  });
+
+  it("atualiza a data da não lançada de mesmo malId e não duplica", () => {
+    const seasons = [season({ id: "a", malId: 100, unreleased: true, releaseDate: "2026-12-01" })];
+    const merged = mergeLegacyUpcoming(seasons, legacy(), makeId);
+    expect(merged).toEqual([
+      season({ id: "a", malId: 100, unreleased: true, releaseDate: "2027-01-10" }),
+    ]);
+  });
+
+  it("mantém o array quando a não lançada já tem a mesma data", () => {
+    const seasons = [season({ id: "a", malId: 100, unreleased: true, releaseDate: "2027-01-10" })];
+    expect(mergeLegacyUpcoming(seasons, legacy(), makeId)).toBe(seasons);
+  });
+
+  it("adiciona não lançada sem precisão quando não há correspondente", () => {
+    const seasons = [season({ id: "a", malId: 1 })];
+    expect(mergeLegacyUpcoming(seasons, legacy(), makeId)).toEqual([
+      seasons[0],
+      {
+        id: "novo",
+        name: "Frieren 2nd Season",
+        malId: 100,
+        unreleased: true,
+        releaseDate: "2027-01-10",
+        releasePrecision: null,
+      },
+    ]);
+  });
+
+  it("aceita legado manual sem malId e deduplica por nome + data", () => {
+    const manual = legacy({ malId: undefined, source: undefined, title: "Temporada 3" });
+    const once = mergeLegacyUpcoming([], manual, makeId);
+    expect(once).toEqual([
+      {
+        id: "novo",
+        name: "Temporada 3",
+        malId: null,
+        unreleased: true,
+        releaseDate: "2027-01-10",
+        releasePrecision: null,
+      },
+    ]);
+    expect(mergeLegacyUpcoming(once!, manual, makeId)).toBe(once);
+    // Mesma data com outro nome não é a mesma temporada.
+    expect(mergeLegacyUpcoming(once!, { ...manual, title: "Outra" }, makeId)).toHaveLength(2);
+  });
+
+  it("é idempotente", () => {
+    const seasons = [season({ id: "a", malId: 1 })];
+    const once = mergeLegacyUpcoming(seasons, legacy(), makeId)!;
+    const twice = mergeLegacyUpcoming(once, legacy(), makeId);
+    expect(twice).toBe(once);
+    expect(twice).toEqual(once);
+  });
+
+  it.each(["", "data-inválida", "2027-13-45", "2027-01-10T00:00:00Z"])(
+    "não converte data inválida (%s)",
+    (releaseDate) => {
+      expect(mergeLegacyUpcoming([], legacy({ releaseDate }), makeId)).toBeNull();
+    },
+  );
 });
 
 describe("isAwardWinning", () => {
@@ -354,5 +484,80 @@ describe("selectUpcomingStrip", () => {
         withDate("legado", "2026-09-22"),
       ]),
     ).toEqual(["auto", "manual", "legado"]);
+  });
+
+  const unreleased = (id: string, releaseDate: string, overrides: Partial<Season> = {}) =>
+    season({ id, name: `${id} nome`, unreleased: true, releaseDate, ...overrides });
+
+  it("gera um item por temporada não lançada, com janela e ordem", () => {
+    today();
+    const items = selectUpcomingStrip([
+      anime({
+        id: "a",
+        seasons: [
+          season({ id: "lancada" }),
+          unreleased("a-futuro", "2027-01-10", { imageUrl: "capa.jpg" }),
+          unreleased("a-velha", "2026-09-01"),
+          unreleased("a-sem-data", ""),
+        ],
+      }),
+      anime({ id: "b", seasons: [unreleased("b-amanha", "2026-09-17")] }),
+    ]);
+    expect(items.map((i) => i.entry.seasonId)).toEqual(["b-amanha", "a-futuro"]);
+    expect(items[1].entry).toEqual({
+      title: "a-futuro nome",
+      releaseDate: "2027-01-10",
+      imageUrl: "capa.jpg",
+      seasonId: "a-futuro",
+    });
+  });
+
+  it("inclui o legado sem duplicar uma temporada de mesmo malId", () => {
+    today();
+    const items = selectUpcomingStrip([
+      anime({
+        id: "dup",
+        seasons: [unreleased("s", "2026-09-20", { malId: 7 })],
+        upcoming: { title: "dup T2", releaseDate: "2026-09-20", source: "auto", malId: 7 },
+      }),
+      anime({
+        id: "lancada",
+        seasons: [season({ malId: 8 })],
+        upcoming: { title: "lancada T2", releaseDate: "2026-09-21", source: "auto", malId: 8 },
+      }),
+      anime({
+        id: "so-legado",
+        seasons: [unreleased("outra", "2026-09-25", { malId: 9 })],
+        upcoming: { title: "so-legado T3", releaseDate: "2026-09-22", source: "auto", malId: 10 },
+      }),
+    ]);
+    expect(items.map((i) => [i.anime.id, i.entry.seasonId])).toEqual([
+      ["dup", "s"],
+      ["so-legado", null],
+      ["so-legado", "outra"],
+    ]);
+  });
+});
+
+describe("nextRelease", () => {
+  it("devolve a menor data entre não lançadas e legado", () => {
+    expect(
+      nextRelease(
+        anime({
+          seasons: [
+            season({ id: "x", unreleased: true, releaseDate: "2027-03-01" }),
+            season({ id: "y", unreleased: true, releaseDate: "2027-02-01" }),
+          ],
+          upcoming: { title: "Legado", releaseDate: "2027-04-01" },
+        }),
+      )?.seasonId,
+    ).toBe("y");
+  });
+
+  it("cai no legado quando não há não lançadas", () => {
+    expect(
+      nextRelease(anime({ upcoming: { title: "Legado", releaseDate: "2027-04-01" } })),
+    ).toEqual({ title: "Legado", releaseDate: "2027-04-01", imageUrl: null, seasonId: null });
+    expect(nextRelease(anime())).toBeNull();
   });
 });

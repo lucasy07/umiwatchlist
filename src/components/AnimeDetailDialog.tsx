@@ -16,6 +16,7 @@ import {
   isAwardWinning,
   isExcludedFromAverage,
   mediaMAL,
+  releasedSeasons,
 } from "@/lib/anime-storage";
 import { fetchAnilistBanner } from "@/lib/anilist-client";
 import { formatScore, scoreColor } from "@/lib/score-format";
@@ -90,9 +91,10 @@ export function AnimeDetailDialog({
   const bannerLoaded = banner != null && loadedSrc === banner;
   const mal = anime ? mediaMAL(anime.seasons) : null;
   const time = anime ? animeMinutes(anime) : null;
+  const seasonCount = anime ? releasedSeasons(anime.seasons).length : 0;
   const meta = anime
     ? [
-        `${anime.seasons.length} ${anime.seasons.length === 1 ? "temporada" : "temporadas"}`,
+        `${seasonCount} ${seasonCount === 1 ? "temporada" : "temporadas"}`,
         time && time.episodes > 0 && `${time.episodes} episódios`,
         time && time.minutes > 0 && formatMinutes(time.minutes),
       ]

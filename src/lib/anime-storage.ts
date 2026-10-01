@@ -18,7 +18,28 @@ export type Season = {
   durationMin?: number | null;
   /** URL da capa no CDN do MAL. undefined = nunca buscado; null = buscado e indisponível. */
   imageUrl?: string | null;
+  /** true = anunciada e ainda não lançada. Fica fora de todos os cálculos. Ausente = lançada. */
+  unreleased?: boolean;
+  /** Estreia prevista (ISO YYYY-MM-DD). */
+  releaseDate?: string | null;
+  /** Precisão de `releaseDate`. null/ausente = desconhecida. */
+  releasePrecision?: "day" | "month" | "year" | null;
 };
+
+export function isUnreleased(season: Season): boolean {
+  return season.unreleased === true;
+}
+
+/** Só as temporadas lançadas. Devolve o mesmo array quando não há não lançadas. */
+export function releasedSeasons(seasons: Season[]): Season[] {
+  return seasons.some(isUnreleased) ? seasons.filter((s) => !isUnreleased(s)) : seasons;
+}
+
+/** O anime com só as temporadas lançadas. Devolve o mesmo objeto quando não há não lançadas. */
+export function withReleasedSeasons(anime: Anime): Anime {
+  const seasons = releasedSeasons(anime.seasons);
+  return seasons === anime.seasons ? anime : { ...anime, seasons };
+}
 
 /**
  * A Jikan devolve `duration` como string livre ("24 min per ep", "1 hr 47 min").
@@ -60,6 +81,7 @@ export function animeMinutes(anime: Anime): {
   let episodes = 0;
   let missing = 0;
   for (const s of anime.seasons) {
+    if (isUnreleased(s)) continue;
     const m = seasonMinutes(s);
     if (m === null) {
       missing += 1;
@@ -384,11 +406,11 @@ export function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-/** Arithmetic mean of MAL scores across seasons. OVAs excluded. null if none. */
+/** Arithmetic mean of MAL scores across seasons. OVAs and unreleased excluded. null if none. */
 export function mediaMAL(seasons: Season[]): number | null {
   const scored = seasons.filter(
     (s): s is Season & { malScore: number } =>
-      typeof s.malScore === "number" && !isExcludedFromAverage(s),
+      typeof s.malScore === "number" && !isUnreleased(s) && !isExcludedFromAverage(s),
   );
   if (scored.length === 0) return null;
   return scored.reduce((s, x) => s + x.malScore, 0) / scored.length;
@@ -435,16 +457,98 @@ export function formatDateBR(dateStr?: string, { year = true }: { year?: boolean
 /** Premieres stay in the "Em breve" strip for this many days after release. */
 export const UPCOMING_RECENT_DAYS = 7;
 
-export type UpcomingStripItem = { anime: Anime; upcoming: UpcomingSeason; days: number };
+export function isValidIsoDate(dateStr: string | null | undefined): dateStr is string {
+  if (typeof dateStr !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false;
+  return !Number.isNaN(new Date(dateStr + "T00:00:00").getTime());
+}
+
+/** Season matching a legacy `upcoming`: same `malId`, or same name + date when the legacy has no `malId`. */
+export function findLegacyMatch(seasons: Season[], upcoming: UpcomingSeason): Season | undefined {
+  if (upcoming.malId != null) return seasons.find((s) => s.malId === upcoming.malId);
+  return seasons.find((s) => s.name === upcoming.title && s.releaseDate === upcoming.releaseDate);
+}
+
+/**
+ * Merges a legacy `upcoming` into `seasons` as an unreleased season. Idempotent: returns the same
+ * array when nothing changes. Returns null when the legacy date is invalid (not convertible).
+ */
+export function mergeLegacyUpcoming(
+  seasons: Season[],
+  upcoming: UpcomingSeason,
+  makeId: () => string = uid,
+): Season[] | null {
+  const releaseDate = upcoming.releaseDate;
+  if (!isValidIsoDate(releaseDate)) return null;
+  const match = findLegacyMatch(seasons, upcoming);
+  if (match) {
+    if (!isUnreleased(match) || match.releaseDate === releaseDate) return seasons;
+    return seasons.map((s) => (s === match ? { ...s, releaseDate } : s));
+  }
+  return [
+    ...seasons,
+    {
+      id: makeId(),
+      name: upcoming.title,
+      malId: upcoming.malId ?? null,
+      unreleased: true,
+      releaseDate,
+      releasePrecision: null,
+    },
+  ];
+}
+
+/** A scheduled premiere: an unreleased season (`seasonId`) or the legacy `upcoming` (`seasonId: null`). */
+export type UpcomingEntry = {
+  title: string;
+  releaseDate: string;
+  imageUrl: string | null;
+  seasonId: string | null;
+};
+
+/** Scheduled premieres of an anime with a valid date. The legacy `upcoming` is skipped when a season already covers it. */
+export function upcomingEntries(anime: Anime): UpcomingEntry[] {
+  const entries: UpcomingEntry[] = [];
+  for (const s of anime.seasons) {
+    if (!isUnreleased(s) || !isValidIsoDate(s.releaseDate)) continue;
+    entries.push({
+      title: s.name,
+      releaseDate: s.releaseDate,
+      imageUrl: s.imageUrl ?? null,
+      seasonId: s.id,
+    });
+  }
+  const legacy = anime.upcoming;
+  if (legacy && isValidIsoDate(legacy.releaseDate) && !findLegacyMatch(anime.seasons, legacy)) {
+    entries.push({
+      title: legacy.title,
+      releaseDate: legacy.releaseDate,
+      imageUrl: null,
+      seasonId: null,
+    });
+  }
+  return entries;
+}
+
+/** Earliest scheduled premiere of an anime, or null. */
+export function nextRelease(anime: Anime): UpcomingEntry | null {
+  let next: UpcomingEntry | null = null;
+  for (const entry of upcomingEntries(anime)) {
+    if (!next || entry.releaseDate < next.releaseDate) next = entry;
+  }
+  return next;
+}
+
+export type UpcomingStripItem = { anime: Anime; entry: UpcomingEntry; days: number };
 
 /** Scheduled seasons for the "Em breve" strip: valid date, released at most UPCOMING_RECENT_DAYS ago, soonest first. */
 export function selectUpcomingStrip(animes: Anime[]): UpcomingStripItem[] {
   const items: UpcomingStripItem[] = [];
   for (const anime of animes) {
-    const upcoming = anime.upcoming;
-    const days = daysUntil(upcoming?.releaseDate);
-    if (!upcoming || days === null || days < -UPCOMING_RECENT_DAYS) continue;
-    items.push({ anime, upcoming, days });
+    for (const entry of upcomingEntries(anime)) {
+      const days = daysUntil(entry.releaseDate);
+      if (days === null || days < -UPCOMING_RECENT_DAYS) continue;
+      items.push({ anime, entry, days });
+    }
   }
   return items.sort((a, b) => a.days - b.days);
 }

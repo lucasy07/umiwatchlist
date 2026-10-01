@@ -2,10 +2,12 @@ import {
   type Anime,
   type Season,
   isExcludedFromAverage,
+  mergeLegacyUpcoming,
   tierFromAverage,
   updateAnimeMeta,
   updateSeasons,
   updateTier,
+  updateUpcoming,
   parseJikanDuration,
 } from "@/lib/anime-storage";
 import { getJikanAnime, searchJikanAnime } from "@/lib/jikan-client";
@@ -63,6 +65,39 @@ export type MigrationParams = {
   onPatch: (id: string, patch: Partial<Anime>) => void;
   signal: AbortSignal;
 };
+
+/**
+ * Converts legacy `upcoming` into an unreleased season. Not versioned: runs whenever an anime still
+ * has `upcoming`, because the new-seasons check keeps writing there.
+ */
+async function backfillLegacyUpcoming({ animes, onPatch, signal }: MigrationParams): Promise<void> {
+  for (const anime of animes) {
+    if (signal.aborted) return;
+    const upcoming = anime.upcoming;
+    if (!upcoming) continue;
+    const merged = mergeLegacyUpcoming(anime.seasons, upcoming);
+    if (merged === null) {
+      console.warn("upcoming com data inválida não convertido:", anime.name, upcoming);
+      continue;
+    }
+    try {
+      if (merged !== anime.seasons) {
+        await updateSeasons(anime.id, merged);
+        // Keep the shared snapshot in sync so later backfills see the new season.
+        anime.seasons = merged;
+        if (signal.aborted) return;
+        onPatch(anime.id, { seasons: merged });
+      }
+      await updateUpcoming(anime.id, null);
+      anime.upcoming = undefined;
+      if (signal.aborted) return;
+      // Seasons again: an aborted earlier run may have saved them without patching the page.
+      onPatch(anime.id, { seasons: anime.seasons, upcoming: undefined });
+    } catch (err) {
+      console.error(err);
+    }
+  }
+}
 
 async function backfillImageUrl({
   userId,
@@ -313,6 +348,8 @@ async function migrateTierFromRatings({
 }
 
 export async function runMigrations(params: MigrationParams): Promise<void> {
+  await backfillLegacyUpcoming(params);
+  if (params.signal.aborted) return;
   await backfillImageUrl(params);
   if (params.signal.aborted) return;
   await backfillSeasonDetails(params);
