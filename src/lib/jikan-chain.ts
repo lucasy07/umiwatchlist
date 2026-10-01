@@ -45,7 +45,11 @@ export function deriveReleaseDate(aired: JikanAnimeDetails["aired"]): {
 }
 
 const KEEP_TYPES = new Set(["TV", "ONA", "Movie", "OVA", "Special", "TV Special"]);
-const MAX_ENTRIES = 15;
+const MAX_ENTRIES = 25;
+
+function isAbortError(error: unknown): boolean {
+  return (error as { name?: string } | null)?.name === "AbortError";
+}
 
 async function getRelations(malId: number, signal?: AbortSignal): Promise<number[]> {
   const relations = await getJikanRelations(malId, { signal, priority: "background" });
@@ -59,12 +63,8 @@ async function getRelations(malId: number, signal?: AbortSignal): Promise<number
   return ids;
 }
 
-async function getDetails(malId: number, signal?: AbortSignal): Promise<JikanAnimeDetails | null> {
-  try {
-    return await getJikanAnime(malId, { signal, priority: "background" });
-  } catch {
-    return null;
-  }
+async function getDetails(malId: number, signal?: AbortSignal): Promise<JikanAnimeDetails> {
+  return getJikanAnime(malId, { signal, priority: "background" });
 }
 
 export type ChainProgress = {
@@ -76,18 +76,29 @@ export type BuildChainOptions = {
   knownMalIds?: Set<number>;
 };
 
+/** Chain plus how trustworthy it is: failed Jikan requests and whether MAX_ENTRIES cut the walk. */
+export type ChainReport = {
+  seasons: ChainSeason[];
+  requests: number;
+  failedRequests: number;
+  truncated: boolean;
+};
+
 /**
  * Build the season chain for a given malId by walking Sequel/Prequel
  * relations recursively. Sequential requests with rate-limit delay.
  *
  * Returns seasons of type TV/ONA, sorted by year ascending.
+ * A failed request leaves its node out instead of failing the chain; the report counts it.
  */
-export async function buildChain(
+export async function buildChainDetailed(
   rootMalId: number,
   onProgress?: (p: ChainProgress) => void,
   signal?: AbortSignal,
   options?: BuildChainOptions,
-): Promise<ChainSeason[]> {
+): Promise<ChainReport> {
+  let requests = 0;
+  let failedRequests = 0;
   const visited = new Set<number>([rootMalId]);
   const queue: number[] = [rootMalId];
   const idsToFetch: number[] = [];
@@ -97,6 +108,7 @@ export async function buildChain(
     const id = queue.shift()!;
     idsToFetch.push(id);
     if (idsToFetch.length >= MAX_ENTRIES) break;
+    requests += 1;
     try {
       const related = await getRelations(id, signal);
       for (const r of related) {
@@ -105,8 +117,9 @@ export async function buildChain(
         visited.add(r);
         queue.push(r);
       }
-    } catch {
-      // ignore relation errors for a single node
+    } catch (error) {
+      if (isAbortError(error) || signal?.aborted) throw new DOMException("Aborted", "AbortError");
+      failedRequests += 1;
     }
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
   }
@@ -120,7 +133,14 @@ export async function buildChain(
   const seasons: ChainSeason[] = [];
   for (let i = 0; i < detailIds.length; i++) {
     const id = detailIds[i];
-    const d = await getDetails(id, signal);
+    requests += 1;
+    let d: JikanAnimeDetails | null = null;
+    try {
+      d = await getDetails(id, signal);
+    } catch (error) {
+      if (isAbortError(error) || signal?.aborted) throw new DOMException("Aborted", "AbortError");
+      failedRequests += 1;
+    }
     if (d && d.type && KEEP_TYPES.has(d.type)) {
       const year = d.year ?? (d.aired?.from ? new Date(d.aired.from).getFullYear() : null);
       seasons.push({
@@ -154,5 +174,20 @@ export async function buildChain(
     if (ay !== by) return ay - by;
     return a.malId - b.malId;
   });
-  return seasons;
+  return {
+    seasons,
+    requests,
+    failedRequests,
+    truncated: idsToFetch.length >= MAX_ENTRIES,
+  };
+}
+
+/** Season chain only, for callers that don't care whether it is complete. */
+export async function buildChain(
+  rootMalId: number,
+  onProgress?: (p: ChainProgress) => void,
+  signal?: AbortSignal,
+  options?: BuildChainOptions,
+): Promise<ChainSeason[]> {
+  return (await buildChainDetailed(rootMalId, onProgress, signal, options)).seasons;
 }

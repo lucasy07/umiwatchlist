@@ -137,19 +137,25 @@ import {
 import { CoverArt, DraggableCover, TierDropRow } from "@/components/TierlistDnD";
 import { tierDropAnimation } from "@/lib/tier-drop-animation";
 
-import { buildChain } from "@/lib/jikan-chain";
+import { buildChainDetailed } from "@/lib/jikan-chain";
 import { getJikanAnime } from "@/lib/jikan-client";
 import { runMigrations } from "@/lib/migrations";
 import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SegmentedToggle } from "@/components/SegmentedToggle";
 import { withViewTransition } from "@/lib/view-transition";
-import type {
-  FoundSeason,
-  PremieredSeason,
-  ScanResult,
-  ScheduledSeason,
-  UpdatedSeason,
+import {
+  classifyChain,
+  isJikanOutage,
+  scanOutcome,
+  type CheckStatus,
+  type FoundSeason,
+  type PremieredSeason,
+  type ScanInterruption,
+  type ScanResult,
+  type ScheduledSeason,
+  type UncheckedAnime,
+  type UpdatedSeason,
 } from "@/lib/scan-types";
 import { formatScore, scoreColor } from "@/lib/score-format";
 
@@ -298,11 +304,17 @@ function Index() {
   const [checkProgress, setCheckProgress] = useState<{ current: number; total: number } | null>(
     null,
   );
-  const [checkAborted, setCheckAborted] = useState<{ scanned: number; total: number } | null>(null);
+  const [checkAborted, setCheckAborted] = useState<{
+    scanned: number;
+    verified: number;
+    total: number;
+    reason: ScanInterruption;
+  } | null>(null);
   const [checkDialogOpen, setCheckDialogOpen] = useState(false);
   const [foundAvailable, setFoundAvailable] = useState<FoundSeason[]>([]);
   const [foundScheduled, setFoundScheduled] = useState<ScheduledSeason[]>([]);
   const [foundPremiered, setFoundPremiered] = useState<PremieredSeason[]>([]);
+  const [foundUnchecked, setFoundUnchecked] = useState<UncheckedAnime[]>([]);
   const scanAbortRef = useRef<AbortController | null>(null);
   const [updatingMalScores, setUpdatingMalScores] = useState(false);
   const [malScoreProgress, setMalScoreProgress] = useState<{
@@ -915,13 +927,17 @@ function Index() {
       available: [],
       scheduled: [],
       premiered: [],
-      aborted: false,
+      unchecked: [],
+      interruption: null,
       scanned: 0,
+      verified: 0,
     };
+    const statuses: CheckStatus[] = [];
     // malIds already handled in this check, so a franchise shared by two targets is reported once.
     const seen = new Set<number>();
     for (let i = 0; i < targets.length; i++) {
       const a = targets[i];
+      let status: CheckStatus = "failed";
       try {
         const known = new Set(seen);
         for (const x of animesRef.current) {
@@ -934,11 +950,15 @@ function Index() {
             .filter((s) => isUnreleased(s) && s.malId)
             .map((s) => s.malId),
         );
-        const chain = await buildChain(a.malId!, undefined, signal, {
+        const report = await buildChainDetailed(a.malId!, undefined, signal, {
           knownMalIds: new Set([...known].filter((id) => !refetch.has(id))),
         });
+        status = classifyChain(report);
+        const chain = report.seasons;
         // Apply to the latest state, not the snapshot from the start of a long check.
-        const latest = animesRef.current.find((x) => x.id === a.id);
+        // A partial chain is still applied: the merge only adds, never removes.
+        const latest =
+          status === "failed" ? undefined : animesRef.current.find((x) => x.id === a.id);
         if (latest) {
           const merge = mergeChainIntoSeasons(latest.seasons, chain, known);
           let saved = merge.seasons === latest.seasons;
@@ -989,39 +1009,56 @@ function Index() {
           }
         }
         for (const s of chain) seen.add(s.malId);
-        try {
-          const iso = new Date().toISOString();
-          await updateLastCheckedAt(a.id, iso);
-          setAnimes((prev) => prev.map((x) => (x.id === a.id ? { ...x, lastCheckedAt: iso } : x)));
-        } catch (err) {
-          console.error("failed to persist last checked for", a.name, err);
+        // Only a complete check counts as checked; the others are retried next time.
+        if (status === "verified") {
+          try {
+            const iso = new Date().toISOString();
+            await updateLastCheckedAt(a.id, iso);
+            setAnimes((prev) =>
+              prev.map((x) => (x.id === a.id ? { ...x, lastCheckedAt: iso } : x)),
+            );
+          } catch (err) {
+            console.error("failed to persist last checked for", a.name, err);
+          }
         }
-        result.scanned += 1;
-        onProgress?.(result.scanned, targets.length);
       } catch (err) {
         const aborted =
           (err instanceof DOMException && err.name === "AbortError") ||
           (err as { name?: string })?.name === "AbortError";
         if (aborted) break;
         console.error("check chain failed for", a.name, err);
+        status = "failed";
+      }
+      result.scanned += 1;
+      if (status === "verified") result.verified += 1;
+      else result.unchecked.push({ parentId: a.id, parentName: a.name, reason: status });
+      onProgress?.(result.scanned, targets.length);
+      statuses.push(status);
+      if (isJikanOutage(statuses)) {
+        result.interruption = "outage";
+        break;
       }
     }
-    result.aborted = signal?.aborted ?? false;
+    if (result.interruption === null && signal?.aborted) result.interruption = "cancelled";
     return result;
   }
 
-  function showScanResult(result: ScanResult) {
-    if (
-      result.available.length === 0 &&
-      result.scheduled.length === 0 &&
-      result.premiered.length === 0
-    ) {
-      toast(result.aborted ? "Verificação cancelada" : "Nenhuma temporada nova encontrada");
+  function showScanResult(result: ScanResult, targetName?: string) {
+    const outcome = scanOutcome(result);
+    if (outcome === "allFailed") {
+      toast.error(
+        `Não foi possível verificar${targetName ? ` ${targetName}` : ""}: a Jikan não respondeu. Tente de novo em alguns minutos.`,
+      );
+      return;
+    }
+    if (outcome === "nothing") {
+      toast(result.interruption ? "Verificação cancelada" : "Nenhuma temporada nova encontrada");
       return;
     }
     setFoundAvailable(result.available);
     setFoundScheduled(result.scheduled);
     setFoundPremiered(result.premiered);
+    setFoundUnchecked(result.unchecked);
     setCheckDialogOpen(true);
   }
 
@@ -1053,7 +1090,14 @@ function Index() {
       setCheckProgress(null);
       scanAbortRef.current = null;
     }
-    if (result.aborted) setCheckAborted({ scanned: result.scanned, total: targets.length });
+    if (result.interruption) {
+      setCheckAborted({
+        scanned: result.scanned,
+        verified: result.verified,
+        total: targets.length,
+        reason: result.interruption,
+      });
+    }
     showScanResult(result);
   }
 
@@ -1073,7 +1117,7 @@ function Index() {
     } finally {
       setCheckingId(null);
     }
-    showScanResult(result);
+    showScanResult(result, anime.name);
   }
 
   async function updateMalScores() {
@@ -2625,6 +2669,7 @@ function Index() {
         available={foundAvailable}
         premiered={foundPremiered}
         scheduled={foundScheduled}
+        unchecked={foundUnchecked}
         onAdd={addFoundSeason}
       />
 

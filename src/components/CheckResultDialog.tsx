@@ -10,15 +10,28 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatReleaseDate, formatReleaseLabel } from "@/lib/anime-storage";
-import type { FoundSeason, PremieredSeason, ScheduledSeason } from "@/lib/scan-types";
+import type {
+  FoundSeason,
+  PremieredSeason,
+  ScanInterruption,
+  ScheduledSeason,
+  UncheckedAnime,
+} from "@/lib/scan-types";
+
+const UNCHECKED_REASON: Record<UncheckedAnime["reason"], string> = {
+  failed: "a Jikan não respondeu",
+  partial: "algumas consultas falharam",
+  truncated: "franquia longa, pode ter cortado",
+};
 
 type CheckResultDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  aborted: { scanned: number; total: number } | null;
+  aborted: { scanned: number; verified: number; total: number; reason: ScanInterruption } | null;
   available: FoundSeason[];
   premiered: PremieredSeason[];
   scheduled: ScheduledSeason[];
+  unchecked: UncheckedAnime[];
   onAdd: (found: FoundSeason) => void;
 };
 
@@ -29,6 +42,7 @@ export function CheckResultDialog({
   available,
   premiered,
   scheduled,
+  unchecked,
   onAdd,
 }: CheckResultDialogProps) {
   return (
@@ -37,9 +51,11 @@ export function CheckResultDialog({
         <DialogHeader>
           <DialogTitle>Novas temporadas</DialogTitle>
           <DialogDescription>
-            {aborted
-              ? `Verificação cancelada em ${aborted.scanned} de ${aborted.total} animes. O resultado é parcial.`
-              : "Resultado da verificação a partir do MyAnimeList."}
+            {aborted?.reason === "outage"
+              ? `A Jikan parece indisponível: verificação interrompida após ${aborted.scanned} de ${aborted.total} animes (${aborted.verified} verificados).`
+              : aborted
+                ? `Verificação cancelada em ${aborted.scanned} de ${aborted.total} animes. O resultado é parcial.`
+                : "Resultado da verificação a partir do MyAnimeList."}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-6">
@@ -131,6 +147,26 @@ export function CheckResultDialog({
               </ul>
             )}
           </section>
+          {unchecked.length > 0 && (
+            <section className="grid gap-2">
+              <h3 className="font-display text-xs uppercase tracking-widest text-muted-foreground">
+                Não verificados
+              </h3>
+              <ul className="grid gap-2">
+                {unchecked.map((u) => (
+                  <li
+                    key={u.parentId}
+                    className="overflow-hidden rounded-lg border border-border/60 bg-card-elevated p-2 min-w-0"
+                  >
+                    <p className="line-clamp-2 text-sm font-medium">{u.parentName}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      {UNCHECKED_REASON[u.reason]}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </div>
         <DialogFooter>
           <Button onClick={() => onOpenChange(false)}>Fechar</Button>
