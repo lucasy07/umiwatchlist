@@ -68,13 +68,47 @@ export function primarySeasonIndex(seasons: Season[]): number {
   );
 }
 
+type ReleaseInfo = { releaseDate: string | null; releasePrecision: ReleasePrecision | null };
+
+function releaseOf(season: Season): ReleaseInfo {
+  return {
+    releaseDate: season.releaseDate ?? null,
+    releasePrecision: season.releaseDate ? (season.releasePrecision ?? null) : null,
+  };
+}
+
+/** Undated 0 < year 1 < month 2 < day 3. A date of unknown precision reads as a day. */
+function precisionRank({ releaseDate, releasePrecision }: ReleaseInfo): number {
+  if (releaseDate === null) return 0;
+  if (releasePrecision === "year") return 1;
+  if (releasePrecision === "month") return 2;
+  return 3;
+}
+
+/**
+ * Whether an incoming release date replaces the saved one: when it is at least as precise, or
+ * later (a delay, even if vaguer). A null date never erases one; the same date and precision is
+ * no change.
+ */
+export function shouldReplaceReleaseDate(current: ReleaseInfo, incoming: ReleaseInfo): boolean {
+  if (incoming.releaseDate === null) return false;
+  if (
+    incoming.releaseDate === current.releaseDate &&
+    (incoming.releasePrecision ?? null) === (current.releasePrecision ?? null)
+  ) {
+    return false;
+  }
+  if (precisionRank(incoming) >= precisionRank(current)) return true;
+  return current.releaseDate !== null && incoming.releaseDate > current.releaseDate;
+}
+
 /** Result of merging a Jikan chain into an anime's seasons during a check. */
 export type ChainMerge = {
   /** Same array when nothing changed. */
   seasons: Season[];
   /** Announced seasons added as unreleased. */
   added: Season[];
-  /** Saved unreleased seasons whose release date changed. */
+  /** Saved unreleased seasons whose release date changed (see `shouldReplaceReleaseDate`). */
   rescheduled: Season[];
   /** Saved unreleased seasons that premiered, already converted. */
   premiered: Season[];
@@ -112,20 +146,11 @@ export function mergeChainIntoSeasons(
       if (!isUnreleased(own)) continue;
       if (isNotYetAired(c.status)) {
         const imageUrl = c.imageUrl ?? own.imageUrl;
-        const dateChanged = (own.releaseDate ?? null) !== c.releaseDate;
-        if (
-          !dateChanged &&
-          (own.releasePrecision ?? null) === c.releasePrecision &&
-          imageUrl === own.imageUrl
-        ) {
-          continue;
-        }
-        const updated = {
-          ...own,
-          releaseDate: c.releaseDate,
-          releasePrecision: c.releasePrecision,
-          imageUrl,
-        };
+        const dateChanged = shouldReplaceReleaseDate(releaseOf(own), c);
+        if (!dateChanged && imageUrl === own.imageUrl) continue;
+        const updated = dateChanged
+          ? { ...own, releaseDate: c.releaseDate, releasePrecision: c.releasePrecision, imageUrl }
+          : { ...own, imageUrl };
         next[index] = updated;
         changed = true;
         if (dateChanged) result.rescheduled.push(updated);
@@ -158,6 +183,44 @@ export function mergeChainIntoSeasons(
   }
   if (changed) result.seasons = next;
   return result;
+}
+
+/**
+ * Completes saved unreleased seasons with another source's data (AniList), by malId. Only fills
+ * what is missing: an undated season gets the date, a vague one only a strictly more precise date
+ * that isn't earlier, and the cover only when there is none. Never premieres a season (that is the
+ * chain's call), so the primary source's own changes are never undone.
+ */
+export function enrichUnreleasedSeasons(
+  seasons: Season[],
+  byMalId: ReadonlyMap<number, ChainSeason>,
+): { seasons: Season[]; rescheduled: Season[] } {
+  const rescheduled: Season[] = [];
+  let changed = false;
+  const next = seasons.map((season) => {
+    const found = isUnreleased(season) && season.malId ? byMalId.get(season.malId) : undefined;
+    if (!found) return season;
+    const current = releaseOf(season);
+    const dateChanged =
+      found.releaseDate !== null &&
+      (current.releaseDate === null ||
+        (precisionRank(found) > precisionRank(current) &&
+          found.releaseDate >= current.releaseDate));
+    const imageUrl = season.imageUrl ?? found.imageUrl ?? season.imageUrl;
+    if (!dateChanged && imageUrl === season.imageUrl) return season;
+    changed = true;
+    const updated: Season = dateChanged
+      ? {
+          ...season,
+          releaseDate: found.releaseDate,
+          releasePrecision: found.releasePrecision,
+          imageUrl,
+        }
+      : { ...season, imageUrl };
+    if (dateChanged) rescheduled.push(updated);
+    return updated;
+  });
+  return { seasons: changed ? next : seasons, rescheduled };
 }
 
 /** Release date written at its precision: "01 de out. de 2027", "out. de 2027", "2027" or "sem data". */

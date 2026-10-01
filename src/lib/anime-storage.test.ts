@@ -20,6 +20,8 @@ import {
   isUnreleased,
   mediaMAL,
   mergeChainIntoSeasons,
+  shouldReplaceReleaseDate,
+  enrichUnreleasedSeasons,
   mergeLegacyUpcoming,
   nextRelease,
   parseJikanDuration,
@@ -812,6 +814,189 @@ describe("mergeChainIntoSeasons", () => {
     const saved = season({ id: "s9", malId: 9, unreleased: true, releaseDate: "2027-01-01" });
     const merge = mergeChainIntoSeasons([released, saved], [link(2)], none, makeId);
     expect(merge.seasons.slice(0, 2)).toEqual([released, saved]);
+  });
+});
+
+describe("shouldReplaceReleaseDate", () => {
+  const at = (
+    releaseDate: string | null,
+    releasePrecision: "day" | "month" | "year" | null = null,
+  ) => ({ releaseDate, releasePrecision });
+
+  it("precisão maior ou igual substitui", () => {
+    expect(shouldReplaceReleaseDate(at("2027-04-01", "month"), at("2027-04-10", "day"))).toBe(true);
+    expect(shouldReplaceReleaseDate(at("2027-04-01", "month"), at("2027-03-01", "month"))).toBe(
+      true,
+    );
+    expect(shouldReplaceReleaseDate(at(null), at("2027-01-01", "year"))).toBe(true);
+  });
+
+  it("precisão menor e data anterior não substitui", () => {
+    expect(shouldReplaceReleaseDate(at("2027-04-10", "day"), at("2027-04-01", "month"))).toBe(
+      false,
+    );
+    expect(shouldReplaceReleaseDate(at("2027-04-01", "month"), at("2027-01-01", "year"))).toBe(
+      false,
+    );
+  });
+
+  it("adiamento substitui mesmo menos preciso", () => {
+    expect(shouldReplaceReleaseDate(at("2027-10-01", "month"), at("2028-01-01", "year"))).toBe(
+      true,
+    );
+    expect(shouldReplaceReleaseDate(at("2027-04-10", "day"), at("2027-05-01", "month"))).toBe(true);
+  });
+
+  it("data nula nunca apaga", () => {
+    expect(shouldReplaceReleaseDate(at("2027-04-10", "day"), at(null))).toBe(false);
+    expect(shouldReplaceReleaseDate(at(null), at(null))).toBe(false);
+  });
+
+  it("mesma data e precisão não é mudança", () => {
+    expect(shouldReplaceReleaseDate(at("2027-04-01", "month"), at("2027-04-01", "month"))).toBe(
+      false,
+    );
+  });
+
+  it("data de precisão desconhecida vale como dia", () => {
+    expect(shouldReplaceReleaseDate(at("2027-04-10"), at("2027-04-01", "month"))).toBe(false);
+    expect(shouldReplaceReleaseDate(at("2027-04-01", "month"), at("2027-04-10"))).toBe(true);
+  });
+});
+
+describe("mergeChainIntoSeasons com regra de data", () => {
+  const link = (overrides: Partial<ChainSeason>): ChainSeason => ({
+    malId: 2,
+    title: "Temporada 2",
+    year: 2027,
+    malScore: null,
+    imageUrl: null,
+    type: "TV",
+    status: "Not yet aired",
+    airedFrom: null,
+    genres: [],
+    episodes: null,
+    durationMin: null,
+    releaseDate: null,
+    releasePrecision: null,
+    ...overrides,
+  });
+  const saved = season({
+    id: "s2",
+    malId: 2,
+    unreleased: true,
+    releaseDate: "2027-04-10",
+    releasePrecision: "day",
+    imageUrl: "capa.jpg",
+  });
+  const none = new Set<number>();
+
+  it("data menos precisa e anterior não troca nem reagenda", () => {
+    const seasons = [saved];
+    const merge = mergeChainIntoSeasons(
+      seasons,
+      [link({ releaseDate: "2027-04-01", releasePrecision: "month" })],
+      none,
+    );
+    expect(merge.seasons).toBe(seasons);
+    expect(merge.rescheduled).toEqual([]);
+  });
+
+  it("sem data não apaga a data salva, mas a capa nova entra", () => {
+    const merge = mergeChainIntoSeasons([saved], [link({ imageUrl: "nova.jpg" })], none);
+    expect(merge.seasons[0]).toEqual({ ...saved, imageUrl: "nova.jpg" });
+    expect(merge.rescheduled).toEqual([]);
+  });
+
+  it("adiamento menos preciso substitui e reagenda", () => {
+    const merge = mergeChainIntoSeasons(
+      [saved],
+      [link({ releaseDate: "2028-01-01", releasePrecision: "year" })],
+      none,
+    );
+    expect(merge.seasons[0]).toMatchObject({ releaseDate: "2028-01-01", releasePrecision: "year" });
+    expect(merge.rescheduled).toHaveLength(1);
+  });
+});
+
+describe("enrichUnreleasedSeasons", () => {
+  const found = (malId: number, overrides: Partial<ChainSeason> = {}): ChainSeason => ({
+    malId,
+    title: `AniList ${malId}`,
+    year: 2027,
+    malScore: null,
+    imageUrl: "anilist.jpg",
+    type: "TV",
+    status: "Not yet aired",
+    airedFrom: null,
+    genres: [],
+    episodes: null,
+    durationMin: null,
+    releaseDate: "2027-07-15",
+    releasePrecision: "day",
+    ...overrides,
+  });
+  const undated = season({ id: "u", malId: 2, unreleased: true, releaseDate: null });
+
+  it("completa a data de não lançada sem data e reagenda", () => {
+    const merge = enrichUnreleasedSeasons([undated], new Map([[2, found(2)]]));
+    expect(merge.seasons[0]).toEqual({
+      ...undated,
+      releaseDate: "2027-07-15",
+      releasePrecision: "day",
+      imageUrl: "anilist.jpg",
+    });
+    expect(merge.rescheduled).toEqual([merge.seasons[0]]);
+  });
+
+  it("só toca não lançadas", () => {
+    const released = season({ id: "r", malId: 2, imageUrl: null });
+    const seasons = [released];
+    expect(enrichUnreleasedSeasons(seasons, new Map([[2, found(2)]])).seasons).toBe(seasons);
+  });
+
+  it("não converte em lançada mesmo com status lançado", () => {
+    const merge = enrichUnreleasedSeasons(
+      [undated],
+      new Map([[2, found(2, { status: "Currently Airing" })]]),
+    );
+    expect(merge.seasons[0].unreleased).toBe(true);
+  });
+
+  it("data mais precisa e não anterior substitui a vaga", () => {
+    const vague = { ...undated, releaseDate: "2027-07-01", releasePrecision: "month" as const };
+    const merge = enrichUnreleasedSeasons([vague], new Map([[2, found(2)]]));
+    expect(merge.seasons[0]).toMatchObject({ releaseDate: "2027-07-15", releasePrecision: "day" });
+  });
+
+  it("mesma precisão, menos precisa ou anterior não troca a data", () => {
+    const vague = {
+      ...undated,
+      releaseDate: "2027-07-01",
+      releasePrecision: "month" as const,
+      imageUrl: "mal.jpg",
+    };
+    for (const other of [
+      found(2, { releaseDate: "2027-10-01", releasePrecision: "month" }),
+      found(2, { releaseDate: "2028-01-01", releasePrecision: "year" }),
+      found(2, { releaseDate: "2027-06-20", releasePrecision: "day" }),
+    ]) {
+      const seasons = [vague];
+      const merge = enrichUnreleasedSeasons(seasons, new Map([[2, other]]));
+      expect(merge.seasons).toBe(seasons);
+      expect(merge.rescheduled).toEqual([]);
+    }
+  });
+
+  it("capa só preenche quando ausente", () => {
+    const withCover = { ...undated, releaseDate: "2027-07-15", releasePrecision: "day" as const };
+    const covered = { ...withCover, imageUrl: "mal.jpg" };
+    expect(enrichUnreleasedSeasons([covered], new Map([[2, found(2)]])).seasons[0].imageUrl).toBe(
+      "mal.jpg",
+    );
+    const merge = enrichUnreleasedSeasons([withCover], new Map([[2, found(2)]]));
+    expect(merge.seasons[0].imageUrl).toBe("anilist.jpg");
+    expect(merge.rescheduled).toEqual([]);
   });
 });
 

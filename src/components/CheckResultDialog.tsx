@@ -19,7 +19,7 @@ import type {
 } from "@/lib/scan-types";
 
 const UNCHECKED_REASON: Record<UncheckedAnime["reason"], string> = {
-  failed: "a Jikan não respondeu",
+  failed: "Jikan e AniList não responderam",
   partial: "algumas consultas falharam",
   truncated: "franquia longa, pode ter cortado",
 };
@@ -32,6 +32,10 @@ type CheckResultDialogProps = {
   premiered: PremieredSeason[];
   scheduled: ScheduledSeason[];
   unchecked: UncheckedAnime[];
+  /** Animes verified only thanks to the AniList fallback. */
+  viaAnilist: number;
+  /** The AniList batch that completes unreleased dates failed. */
+  datesFailed: boolean;
   onAdd: (found: FoundSeason) => void;
 };
 
@@ -43,6 +47,8 @@ export function CheckResultDialog({
   premiered,
   scheduled,
   unchecked,
+  viaAnilist,
+  datesFailed,
   onAdd,
 }: CheckResultDialogProps) {
   return (
@@ -52,11 +58,20 @@ export function CheckResultDialog({
           <DialogTitle>Novas temporadas</DialogTitle>
           <DialogDescription>
             {aborted?.reason === "outage"
-              ? `A Jikan parece indisponível: verificação interrompida após ${aborted.scanned} de ${aborted.total} animes (${aborted.verified} verificados).`
+              ? `A Jikan e o AniList parecem indisponíveis: verificação interrompida após ${aborted.scanned} de ${aborted.total} animes (${aborted.verified} verificados).`
               : aborted
                 ? `Verificação cancelada em ${aborted.scanned} de ${aborted.total} animes. O resultado é parcial.`
                 : "Resultado da verificação a partir do MyAnimeList."}
           </DialogDescription>
+          {(viaAnilist > 0 || datesFailed) && (
+            <p className="text-xs text-muted-foreground">
+              {viaAnilist > 0
+                ? `${viaAnilist} ${viaAnilist === 1 ? "anime verificado" : "animes verificados"} via AniList.`
+                : ""}
+              {viaAnilist > 0 && datesFailed ? " " : ""}
+              {datesFailed ? "Não foi possível completar as datas pelo AniList." : ""}
+            </p>
+          )}
         </DialogHeader>
         <div className="grid gap-6">
           <section className="grid gap-2">

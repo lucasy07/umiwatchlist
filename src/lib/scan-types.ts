@@ -66,10 +66,17 @@ export type ScanResult = {
   /** Targets processed, whatever their status. */
   scanned: number;
   verified: number;
+  /** Animes that ended verified only thanks to the AniList fallback. */
+  viaAnilist: number;
+  /** The final AniList batch that completes unreleased dates failed. */
+  datesFailed: boolean;
 };
 
-/** Consecutive animes with no Jikan answer after which a global check stops. */
-export const JIKAN_OUTAGE_STREAK = 3;
+/**
+ * Consecutive "failed" animes that mark a source as down: with Jikan statuses, the rest of the
+ * check skips Jikan; with combined statuses (both sources failed), the check stops.
+ */
+export const OUTAGE_STREAK = 3;
 
 export function classifyChain(
   report: Pick<ChainReport, "requests" | "failedRequests" | "truncated">,
@@ -80,9 +87,31 @@ export function classifyChain(
   return "verified";
 }
 
-export function isJikanOutage(statuses: CheckStatus[]): boolean {
-  if (statuses.length < JIKAN_OUTAGE_STREAK) return false;
-  return statuses.slice(-JIKAN_OUTAGE_STREAK).every((status) => status === "failed");
+export function isOutageStreak(statuses: CheckStatus[]): boolean {
+  if (statuses.length < OUTAGE_STREAK) return false;
+  return statuses.slice(-OUTAGE_STREAK).every((status) => status === "failed");
+}
+
+const STATUS_SEVERITY: Record<CheckStatus, number> = {
+  verified: 0,
+  truncated: 1,
+  partial: 2,
+  failed: 3,
+};
+
+/**
+ * Final status of an anime checked by Jikan and, as fallback, AniList (null = not asked).
+ * A complete AniList chain verifies it; otherwise the worse of the sources that answered, so
+ * "failed" still means nothing was applied: both failed (or Jikan was skipped and AniList failed).
+ */
+export function combineCheckStatus(
+  jikan: CheckStatus | null,
+  anilist: CheckStatus | null,
+): CheckStatus {
+  if (anilist === "verified") return "verified";
+  if (jikan === null || jikan === "failed") return anilist ?? "failed";
+  if (anilist === null || anilist === "failed") return jikan;
+  return STATUS_SEVERITY[anilist] > STATUS_SEVERITY[jikan] ? anilist : jikan;
 }
 
 export function scanOutcome(result: ScanResult): "nothing" | "allFailed" | "dialog" {

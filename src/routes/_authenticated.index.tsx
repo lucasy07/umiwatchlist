@@ -80,7 +80,9 @@ import {
   setWatched,
   importLegacyIfNeeded,
   isUnreleased,
+  isVaguePrecision,
   mergeChainIntoSeasons,
+  enrichUnreleasedSeasons,
   uid,
   mediaMAL,
   nextRelease,
@@ -137,7 +139,8 @@ import {
 import { CoverArt, DraggableCover, TierDropRow } from "@/components/TierlistDnD";
 import { tierDropAnimation } from "@/lib/tier-drop-animation";
 
-import { buildChainDetailed } from "@/lib/jikan-chain";
+import { buildChainDetailed, type ChainSeason } from "@/lib/jikan-chain";
+import { buildAnilistChain, fetchAnilistSeasonsByMalId } from "@/lib/anilist-client";
 import { getJikanAnime } from "@/lib/jikan-client";
 import { runMigrations } from "@/lib/migrations";
 import { EmptyState } from "@/components/EmptyState";
@@ -146,7 +149,8 @@ import { SegmentedToggle } from "@/components/SegmentedToggle";
 import { withViewTransition } from "@/lib/view-transition";
 import {
   classifyChain,
-  isJikanOutage,
+  combineCheckStatus,
+  isOutageStreak,
   scanOutcome,
   type CheckStatus,
   type FoundSeason,
@@ -315,6 +319,7 @@ function Index() {
   const [foundScheduled, setFoundScheduled] = useState<ScheduledSeason[]>([]);
   const [foundPremiered, setFoundPremiered] = useState<PremieredSeason[]>([]);
   const [foundUnchecked, setFoundUnchecked] = useState<UncheckedAnime[]>([]);
+  const [foundNote, setFoundNote] = useState({ viaAnilist: 0, datesFailed: false });
   const scanAbortRef = useRef<AbortController | null>(null);
   const [updatingMalScores, setUpdatingMalScores] = useState(false);
   const [malScoreProgress, setMalScoreProgress] = useState<{
@@ -931,123 +936,224 @@ function Index() {
       interruption: null,
       scanned: 0,
       verified: 0,
+      viaAnilist: 0,
+      datesFailed: false,
     };
+    const isAbort = (err: unknown) =>
+      (err instanceof DOMException && err.name === "AbortError") ||
+      (err as { name?: string })?.name === "AbortError";
+    const pushScheduled = (parentId: string, parentName: string, s: Season) => {
+      const entry: ScheduledSeason = {
+        parentId,
+        parentName,
+        title: s.name,
+        releaseDate: s.releaseDate ?? null,
+        releasePrecision: s.releasePrecision ?? null,
+      };
+      // The date batch may refine a season the chain just added: keep one entry per season.
+      const index = result.scheduled.findIndex(
+        (x) => x.parentId === parentId && x.title === s.name,
+      );
+      if (index === -1) result.scheduled.push(entry);
+      else result.scheduled[index] = entry;
+    };
+    // Applies a chain to the latest state, not the snapshot from the start of a long check.
+    // A partial chain is still applied: the merge only adds, never removes.
+    const applyChain = async (a: Anime, chain: ChainSeason[], known: ReadonlySet<number>) => {
+      const latest = animesRef.current.find((x) => x.id === a.id);
+      if (!latest) return;
+      const merge = mergeChainIntoSeasons(latest.seasons, chain, known);
+      let saved = merge.seasons === latest.seasons;
+      if (!saved) {
+        try {
+          await updateSeasons(a.id, merge.seasons);
+          setAnimes((prev) =>
+            prev.map((x) => (x.id === a.id ? { ...x, seasons: merge.seasons } : x)),
+          );
+          saved = true;
+        } catch (err) {
+          console.error("failed to persist checked seasons for", a.name, err);
+        }
+      }
+      if (saved) {
+        for (const s of [...merge.added, ...merge.rescheduled]) {
+          pushScheduled(a.id, latest.name, s);
+        }
+        for (const s of merge.premiered) {
+          result.premiered.push({
+            parentId: a.id,
+            parentName: latest.name,
+            title: s.name,
+            type: s.type ?? null,
+            year: s.year ?? null,
+          });
+        }
+      }
+      for (const s of merge.available) {
+        result.available.push({
+          parentId: a.id,
+          parentName: latest.name,
+          malId: s.malId,
+          title: s.title,
+          malScore: s.malScore,
+          imageUrl: s.imageUrl,
+          type: s.type,
+          year: s.year,
+          episodes: s.episodes,
+          durationMin: s.durationMin,
+        });
+      }
+    };
+
     const statuses: CheckStatus[] = [];
+    const jikanStatuses: CheckStatus[] = [];
+    // After OUTAGE_STREAK animes without a Jikan answer, skip it and go straight to AniList.
+    let jikanDown = false;
+    let aborted = false;
     // malIds already handled in this check, so a franchise shared by two targets is reported once.
     const seen = new Set<number>();
     for (let i = 0; i < targets.length; i++) {
       const a = targets[i];
-      let status: CheckStatus = "failed";
-      try {
-        const known = new Set(seen);
-        for (const x of animesRef.current) {
-          if (x.malId) known.add(x.malId);
-          for (const s of x.seasons) if (s.malId) known.add(s.malId);
+      let jikanStatus: CheckStatus | null = null;
+      let anilistStatus: CheckStatus | null = null;
+      const known = new Set(seen);
+      for (const x of animesRef.current) {
+        if (x.malId) known.add(x.malId);
+        for (const s of x.seasons) if (s.malId) known.add(s.malId);
+      }
+      // Unreleased seasons of the target are fetched again to refresh their date or premiere.
+      const refetch = new Set(
+        (animesRef.current.find((x) => x.id === a.id) ?? a).seasons
+          .filter((s) => isUnreleased(s) && s.malId)
+          .map((s) => s.malId),
+      );
+      const knownMalIds = new Set([...known].filter((id) => !refetch.has(id)));
+      const jikanIds = new Set<number>();
+      if (!jikanDown) {
+        try {
+          const report = await buildChainDetailed(a.malId!, undefined, signal, { knownMalIds });
+          jikanStatus = classifyChain(report);
+          if (jikanStatus !== "failed") await applyChain(a, report.seasons, known);
+          for (const s of report.seasons) jikanIds.add(s.malId);
+        } catch (err) {
+          if (isAbort(err)) {
+            aborted = true;
+            break;
+          }
+          console.error("check chain failed for", a.name, err);
+          jikanStatus = "failed";
         }
-        // Unreleased seasons of the target are fetched again to refresh their date or premiere.
-        const refetch = new Set(
-          (animesRef.current.find((x) => x.id === a.id) ?? a).seasons
-            .filter((s) => isUnreleased(s) && s.malId)
-            .map((s) => s.malId),
-        );
-        const report = await buildChainDetailed(a.malId!, undefined, signal, {
-          knownMalIds: new Set([...known].filter((id) => !refetch.has(id))),
-        });
-        status = classifyChain(report);
-        const chain = report.seasons;
-        // Apply to the latest state, not the snapshot from the start of a long check.
-        // A partial chain is still applied: the merge only adds, never removes.
-        const latest =
-          status === "failed" ? undefined : animesRef.current.find((x) => x.id === a.id);
-        if (latest) {
-          const merge = mergeChainIntoSeasons(latest.seasons, chain, known);
-          let saved = merge.seasons === latest.seasons;
-          if (!saved) {
-            try {
-              await updateSeasons(a.id, merge.seasons);
-              setAnimes((prev) =>
-                prev.map((x) => (x.id === a.id ? { ...x, seasons: merge.seasons } : x)),
-              );
-              saved = true;
-            } catch (err) {
-              console.error("failed to persist checked seasons for", a.name, err);
-            }
+        jikanStatuses.push(jikanStatus);
+        if (isOutageStreak(jikanStatuses)) jikanDown = true;
+      }
+      // AniList only fills in for an incomplete Jikan answer; Jikan wins on what it returned.
+      if (jikanStatus !== "verified") {
+        try {
+          const report = await buildAnilistChain(a.malId!, signal, { knownMalIds });
+          anilistStatus = classifyChain(report);
+          const chain = report.seasons.filter((s) => !jikanIds.has(s.malId));
+          if (anilistStatus !== "failed") await applyChain(a, chain, known);
+          for (const s of chain) seen.add(s.malId);
+        } catch (err) {
+          if (isAbort(err)) {
+            aborted = true;
+            break;
           }
-          if (saved) {
-            for (const s of [...merge.added, ...merge.rescheduled]) {
-              result.scheduled.push({
-                parentId: a.id,
-                parentName: latest.name,
-                title: s.name,
-                releaseDate: s.releaseDate ?? null,
-                releasePrecision: s.releasePrecision ?? null,
-              });
-            }
-            for (const s of merge.premiered) {
-              result.premiered.push({
-                parentId: a.id,
-                parentName: latest.name,
-                title: s.name,
-                type: s.type ?? null,
-                year: s.year ?? null,
-              });
-            }
-          }
-          for (const s of merge.available) {
-            result.available.push({
-              parentId: a.id,
-              parentName: latest.name,
-              malId: s.malId,
-              title: s.title,
-              malScore: s.malScore,
-              imageUrl: s.imageUrl,
-              type: s.type,
-              year: s.year,
-              episodes: s.episodes,
-              durationMin: s.durationMin,
-            });
-          }
+          console.error("AniList chain failed for", a.name, err);
+          anilistStatus = "failed";
         }
-        for (const s of chain) seen.add(s.malId);
-        // Only a complete check counts as checked; the others are retried next time.
-        if (status === "verified") {
-          try {
-            const iso = new Date().toISOString();
-            await updateLastCheckedAt(a.id, iso);
-            setAnimes((prev) =>
-              prev.map((x) => (x.id === a.id ? { ...x, lastCheckedAt: iso } : x)),
-            );
-          } catch (err) {
-            console.error("failed to persist last checked for", a.name, err);
-          }
+      }
+      for (const id of jikanIds) seen.add(id);
+      const status = combineCheckStatus(jikanStatus, anilistStatus);
+      // Only a complete check counts as checked; the others are retried next time.
+      if (status === "verified") {
+        try {
+          const iso = new Date().toISOString();
+          await updateLastCheckedAt(a.id, iso);
+          setAnimes((prev) => prev.map((x) => (x.id === a.id ? { ...x, lastCheckedAt: iso } : x)));
+        } catch (err) {
+          console.error("failed to persist last checked for", a.name, err);
         }
-      } catch (err) {
-        const aborted =
-          (err instanceof DOMException && err.name === "AbortError") ||
-          (err as { name?: string })?.name === "AbortError";
-        if (aborted) break;
-        console.error("check chain failed for", a.name, err);
-        status = "failed";
       }
       result.scanned += 1;
-      if (status === "verified") result.verified += 1;
-      else result.unchecked.push({ parentId: a.id, parentName: a.name, reason: status });
+      if (status === "verified") {
+        result.verified += 1;
+        if (jikanStatus !== "verified") result.viaAnilist += 1;
+      } else {
+        result.unchecked.push({ parentId: a.id, parentName: a.name, reason: status });
+      }
       onProgress?.(result.scanned, targets.length);
       statuses.push(status);
-      if (isJikanOutage(statuses)) {
+      if (isOutageStreak(statuses)) {
         result.interruption = "outage";
         break;
       }
     }
+    if (!aborted && !signal?.aborted) {
+      await completeUnreleasedDates(
+        targets.slice(0, result.scanned),
+        result,
+        pushScheduled,
+        signal,
+      );
+    }
     if (result.interruption === null && signal?.aborted) result.interruption = "cancelled";
     return result;
+  }
+
+  /**
+   * One AniList batch for the undated or vague unreleased seasons of the checked animes; each
+   * changed anime is written once, on the latest state. A failure only sets `datesFailed`.
+   */
+  async function completeUnreleasedDates(
+    checked: Anime[],
+    result: ScanResult,
+    pushScheduled: (parentId: string, parentName: string, s: Season) => void,
+    signal?: AbortSignal,
+  ) {
+    const ids = new Set(checked.map((a) => a.id));
+    const latestOf = () => animesRef.current.filter((a) => ids.has(a.id));
+    const malIds = latestOf().flatMap((a) =>
+      a.seasons
+        .filter(
+          (s) =>
+            isUnreleased(s) &&
+            typeof s.malId === "number" &&
+            (!s.releaseDate || isVaguePrecision(s.releasePrecision)),
+        )
+        .map((s) => s.malId as number),
+    );
+    if (malIds.length === 0) return;
+    let byMalId: Map<number, ChainSeason>;
+    try {
+      byMalId = await fetchAnilistSeasonsByMalId(malIds, signal);
+    } catch (err) {
+      if ((err as { name?: string })?.name === "AbortError") return;
+      console.error("AniList release date batch failed", err);
+      result.datesFailed = true;
+      return;
+    }
+    for (const latest of latestOf()) {
+      const enriched = enrichUnreleasedSeasons(latest.seasons, byMalId);
+      if (enriched.seasons === latest.seasons) continue;
+      try {
+        await updateSeasons(latest.id, enriched.seasons);
+        setAnimes((prev) =>
+          prev.map((x) => (x.id === latest.id ? { ...x, seasons: enriched.seasons } : x)),
+        );
+      } catch (err) {
+        console.error("failed to persist release dates for", latest.name, err);
+        continue;
+      }
+      for (const s of enriched.rescheduled) pushScheduled(latest.id, latest.name, s);
+    }
   }
 
   function showScanResult(result: ScanResult, targetName?: string) {
     const outcome = scanOutcome(result);
     if (outcome === "allFailed") {
       toast.error(
-        `Não foi possível verificar${targetName ? ` ${targetName}` : ""}: a Jikan não respondeu. Tente de novo em alguns minutos.`,
+        `Não foi possível verificar${targetName ? ` ${targetName}` : ""}: nem a Jikan nem o AniList responderam. Tente de novo em alguns minutos.`,
       );
       return;
     }
@@ -1059,6 +1165,7 @@ function Index() {
     setFoundScheduled(result.scheduled);
     setFoundPremiered(result.premiered);
     setFoundUnchecked(result.unchecked);
+    setFoundNote({ viaAnilist: result.viaAnilist, datesFailed: result.datesFailed });
     setCheckDialogOpen(true);
   }
 
@@ -2670,6 +2777,8 @@ function Index() {
         premiered={foundPremiered}
         scheduled={foundScheduled}
         unchecked={foundUnchecked}
+        viaAnilist={foundNote.viaAnilist}
+        datesFailed={foundNote.datesFailed}
         onAdd={addFoundSeason}
       />
 

@@ -276,6 +276,8 @@ export function chainSeasonFromAnilist(media: AnilistMedia): ChainSeason | null 
     title,
     year: media.seasonYear ?? date?.year ?? null,
     malScore: null,
+    // The s4.anilist.co CDN mirrors the Origin in Access-Control-Allow-Origin (checked from
+    // umiwatchlist.lovable.app); the tierlist image export draws these covers and depends on it.
     imageUrl: media.coverImage?.extraLarge ?? media.coverImage?.large ?? null,
     type,
     status,
