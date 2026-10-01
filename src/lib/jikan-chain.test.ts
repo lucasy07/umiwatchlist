@@ -8,7 +8,7 @@ const jikan = vi.hoisted(() => ({
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
 vi.mock("@/lib/jikan-client", () => jikan);
 
-import { buildChain, buildChainDetailed, deriveReleaseDate } from "./jikan-chain";
+import { buildChain, buildChainDetailed, deriveReleaseDate, releaseFromParts } from "./jikan-chain";
 import { classifyChain } from "./scan-types";
 
 const parts = (year: number | null, month: number | null, day: number | null) => ({
@@ -59,6 +59,38 @@ describe("deriveReleaseDate", () => {
     });
     expect(deriveReleaseDate(null)).toEqual({ releaseDate: null, releasePrecision: null });
     expect(deriveReleaseDate(undefined)).toEqual({ releaseDate: null, releasePrecision: null });
+  });
+});
+
+describe("releaseFromParts", () => {
+  it("as três partes viram precisão de dia", () => {
+    expect(releaseFromParts({ year: 2027, month: 1, day: 8 })).toEqual({
+      releaseDate: "2027-01-08",
+      releasePrecision: "day",
+    });
+  });
+
+  it("sem dia vira o 1º do mês", () => {
+    expect(releaseFromParts({ year: 2027, month: 10, day: null })).toEqual({
+      releaseDate: "2027-10-01",
+      releasePrecision: "month",
+    });
+  });
+
+  it("só ano vira 1º de janeiro", () => {
+    expect(releaseFromParts({ year: 2027, month: null, day: null })).toEqual({
+      releaseDate: "2027-01-01",
+      releasePrecision: "year",
+    });
+  });
+
+  it("sem ano fica sem data, mesmo com mês e dia", () => {
+    expect(releaseFromParts({ year: null, month: 4, day: 2 })).toEqual({
+      releaseDate: null,
+      releasePrecision: null,
+    });
+    expect(releaseFromParts(null)).toEqual({ releaseDate: null, releasePrecision: null });
+    expect(releaseFromParts(undefined)).toEqual({ releaseDate: null, releasePrecision: null });
   });
 });
 

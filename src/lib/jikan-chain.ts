@@ -24,6 +24,20 @@ export type ChainSeason = {
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
+export type DateParts = { year: number | null; month: number | null; day: number | null };
+
+/** Premiere date from calendar parts (any may be null): ISO padded to the first unknown part. */
+export function releaseFromParts(parts: DateParts | null | undefined): {
+  releaseDate: string | null;
+  releasePrecision: ReleasePrecision | null;
+} {
+  const { year, month, day } = parts ?? { year: null, month: null, day: null };
+  if (year == null) return { releaseDate: null, releasePrecision: null };
+  if (month == null) return { releaseDate: `${year}-01-01`, releasePrecision: "year" };
+  if (day == null) return { releaseDate: `${year}-${pad(month)}-01`, releasePrecision: "month" };
+  return { releaseDate: `${year}-${pad(month)}-${pad(day)}`, releasePrecision: "day" };
+}
+
 /**
  * Premiere date from Jikan's `aired`. Built from `prop.from` parts, never from the UTC
  * `aired.from`; that one is only a fallback (with unknown precision) when `prop` is missing.
@@ -33,19 +47,14 @@ export function deriveReleaseDate(aired: JikanAnimeDetails["aired"]): {
   releasePrecision: ReleasePrecision | null;
 } {
   const parts = aired?.prop?.from;
-  if (parts) {
-    const { year, month, day } = parts;
-    if (year == null) return { releaseDate: null, releasePrecision: null };
-    if (month == null) return { releaseDate: `${year}-01-01`, releasePrecision: "year" };
-    if (day == null) return { releaseDate: `${year}-${pad(month)}-01`, releasePrecision: "month" };
-    return { releaseDate: `${year}-${pad(month)}-${pad(day)}`, releasePrecision: "day" };
-  }
+  if (parts) return releaseFromParts(parts);
   const fallback = aired?.from?.slice(0, 10);
   return { releaseDate: isValidIsoDate(fallback) ? fallback : null, releasePrecision: null };
 }
 
 const KEEP_TYPES = new Set(["TV", "ONA", "Movie", "OVA", "Special", "TV Special"]);
-const MAX_ENTRIES = 25;
+/** Most entries a chain walk collects; reaching it marks the chain as truncated. */
+export const MAX_CHAIN_ENTRIES = 25;
 
 function isAbortError(error: unknown): boolean {
   return (error as { name?: string } | null)?.name === "AbortError";
@@ -67,6 +76,16 @@ async function getDetails(malId: number, signal?: AbortSignal): Promise<JikanAni
   return getJikanAnime(malId, { signal, priority: "background" });
 }
 
+/** Chain order: by year (unknown last), then by malId. Sorts in place. */
+export function sortChainSeasons(seasons: ChainSeason[]): ChainSeason[] {
+  return seasons.sort((a, b) => {
+    const ay = a.year ?? Number.POSITIVE_INFINITY;
+    const by = b.year ?? Number.POSITIVE_INFINITY;
+    if (ay !== by) return ay - by;
+    return a.malId - b.malId;
+  });
+}
+
 export type ChainProgress = {
   current: number;
   total: number;
@@ -76,7 +95,7 @@ export type BuildChainOptions = {
   knownMalIds?: Set<number>;
 };
 
-/** Chain plus how trustworthy it is: failed Jikan requests and whether MAX_ENTRIES cut the walk. */
+/** Chain plus how trustworthy it is: failed requests and whether MAX_CHAIN_ENTRIES cut the walk. */
 export type ChainReport = {
   seasons: ChainSeason[];
   requests: number;
@@ -104,16 +123,16 @@ export async function buildChainDetailed(
   const idsToFetch: number[] = [];
 
   // Discovery phase: BFS the relation graph collecting unique ids.
-  while (queue.length > 0 && idsToFetch.length < MAX_ENTRIES) {
+  while (queue.length > 0 && idsToFetch.length < MAX_CHAIN_ENTRIES) {
     const id = queue.shift()!;
     idsToFetch.push(id);
-    if (idsToFetch.length >= MAX_ENTRIES) break;
+    if (idsToFetch.length >= MAX_CHAIN_ENTRIES) break;
     requests += 1;
     try {
       const related = await getRelations(id, signal);
       for (const r of related) {
         if (visited.has(r)) continue;
-        if (visited.size >= MAX_ENTRIES) break;
+        if (visited.size >= MAX_CHAIN_ENTRIES) break;
         visited.add(r);
         queue.push(r);
       }
@@ -168,17 +187,11 @@ export async function buildChainDetailed(
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
   }
 
-  seasons.sort((a, b) => {
-    const ay = a.year ?? Number.POSITIVE_INFINITY;
-    const by = b.year ?? Number.POSITIVE_INFINITY;
-    if (ay !== by) return ay - by;
-    return a.malId - b.malId;
-  });
   return {
-    seasons,
+    seasons: sortChainSeasons(seasons),
     requests,
     failedRequests,
-    truncated: idsToFetch.length >= MAX_ENTRIES,
+    truncated: idsToFetch.length >= MAX_CHAIN_ENTRIES,
   };
 }
 
