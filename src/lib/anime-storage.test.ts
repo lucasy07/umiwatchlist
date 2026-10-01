@@ -10,12 +10,14 @@ import {
   formatDateBR,
   formatLastChecked,
   formatMinutes,
+  formatReleaseDate,
   formatReleaseLabel,
   isAwardWinning,
   isExcludedFromAverage,
   isNotYetAired,
   isUnreleased,
   mediaMAL,
+  mergeChainIntoSeasons,
   mergeLegacyUpcoming,
   nextRelease,
   parseJikanDuration,
@@ -650,5 +652,165 @@ describe("primarySeasonIndex", () => {
       0,
     );
     expect(primarySeasonIndex([])).toBe(0);
+  });
+});
+
+describe("mergeChainIntoSeasons", () => {
+  const link = (malId: number, overrides: Partial<ChainSeason> = {}): ChainSeason => ({
+    malId,
+    title: `Temporada ${malId}`,
+    year: 2027,
+    malScore: null,
+    imageUrl: null,
+    type: "TV",
+    status: "Not yet aired",
+    airedFrom: null,
+    genres: [],
+    episodes: null,
+    durationMin: null,
+    releaseDate: "2027-04-01",
+    releasePrecision: "month",
+    ...overrides,
+  });
+  const released = season({ id: "s1", malId: 1, malScore: 8 });
+  const none = new Set<number>();
+  const makeId = () => "novo";
+
+  it("anunciada nova entra como não lançada, com data e sem data", () => {
+    const merge = mergeChainIntoSeasons(
+      [released],
+      [link(2), link(3, { releaseDate: null, releasePrecision: null })],
+      none,
+      makeId,
+    );
+    expect(merge.seasons).toHaveLength(3);
+    expect(merge.added).toEqual([
+      expect.objectContaining({ malId: 2, unreleased: true, releaseDate: "2027-04-01" }),
+      expect.objectContaining({ malId: 3, unreleased: true, releaseDate: null }),
+    ]);
+    expect(merge.available).toEqual([]);
+  });
+
+  it("não lançada com data alterada é reagendada e atualiza a capa", () => {
+    const saved = season({
+      id: "s2",
+      name: "Meu nome",
+      malId: 2,
+      unreleased: true,
+      releaseDate: "2027-04-01",
+      releasePrecision: "month",
+      imageUrl: null,
+    });
+    const merge = mergeChainIntoSeasons(
+      [released, saved],
+      [link(2, { releaseDate: "2027-04-10", releasePrecision: "day", imageUrl: "nova.jpg" })],
+      none,
+    );
+    expect(merge.seasons[1]).toEqual({
+      ...saved,
+      releaseDate: "2027-04-10",
+      releasePrecision: "day",
+      imageUrl: "nova.jpg",
+    });
+    expect(merge.rescheduled).toEqual([merge.seasons[1]]);
+  });
+
+  it("não lançada inalterada devolve o mesmo array", () => {
+    const saved = season({
+      id: "s2",
+      malId: 2,
+      unreleased: true,
+      releaseDate: "2027-04-01",
+      releasePrecision: "month",
+      imageUrl: null,
+    });
+    const seasons = [released, saved];
+    const merge = mergeChainIntoSeasons(seasons, [link(2)], none);
+    expect(merge.seasons).toBe(seasons);
+    expect(merge.rescheduled).toEqual([]);
+  });
+
+  it("não lançada que estreou vira temporada normal e preserva id, nome e includeInAverage", () => {
+    const saved = season({
+      id: "s2",
+      name: "Nome editado",
+      malId: 2,
+      includeInAverage: true,
+      unreleased: true,
+      releaseDate: "2027-04-01",
+      releasePrecision: "month",
+      imageUrl: "velha.jpg",
+    });
+    const merge = mergeChainIntoSeasons(
+      [saved],
+      [
+        link(2, {
+          status: "Currently Airing",
+          malScore: 8.4,
+          episodes: 12,
+          durationMin: 24,
+          type: "TV",
+          year: 2027,
+          imageUrl: null,
+        }),
+      ],
+      none,
+    );
+    const converted = merge.seasons[0];
+    expect(converted).toEqual({
+      id: "s2",
+      name: "Nome editado",
+      malId: 2,
+      includeInAverage: true,
+      year: 2027,
+      malScore: 8.4,
+      type: "TV",
+      episodes: 12,
+      durationMin: 24,
+      imageUrl: "velha.jpg",
+    });
+    expect(converted).not.toHaveProperty("unreleased");
+    expect(converted).not.toHaveProperty("releaseDate");
+    expect(converted).not.toHaveProperty("releasePrecision");
+    expect(merge.premiered).toEqual([converted]);
+  });
+
+  it("lançada nova vai para disponíveis sem mudar as seasons", () => {
+    const seasons = [released];
+    const merge = mergeChainIntoSeasons(seasons, [link(2, { status: "Finished Airing" })], none);
+    expect(merge.seasons).toBe(seasons);
+    expect(merge.available.map((c) => c.malId)).toEqual([2]);
+  });
+
+  it("ignora malId já conhecido e temporada própria já lançada", () => {
+    const seasons = [released];
+    const merge = mergeChainIntoSeasons(
+      seasons,
+      [
+        link(1, { status: "Finished Airing", malScore: 9 }),
+        link(5),
+        link(6, { status: "Finished Airing" }),
+      ],
+      new Set([5, 6]),
+    );
+    expect(merge.seasons).toBe(seasons);
+    expect(merge.added).toEqual([]);
+    expect(merge.available).toEqual([]);
+  });
+
+  it("não lançada ausente do chain permanece", () => {
+    const saved = season({ id: "s9", malId: 9, unreleased: true, releaseDate: "2027-01-01" });
+    const merge = mergeChainIntoSeasons([released, saved], [link(2)], none, makeId);
+    expect(merge.seasons.slice(0, 2)).toEqual([released, saved]);
+  });
+});
+
+describe("formatReleaseDate", () => {
+  it("respeita a precisão", () => {
+    expect(formatReleaseDate("2027-10-01", "day")).toBe("01 de out. de 2027");
+    expect(formatReleaseDate("2027-10-01", null)).toBe("01 de out. de 2027");
+    expect(formatReleaseDate("2027-10-01", "month")).toBe("out. de 2027");
+    expect(formatReleaseDate("2027-01-01", "year")).toBe("2027");
+    expect(formatReleaseDate(null, null)).toBe("sem data");
   });
 });

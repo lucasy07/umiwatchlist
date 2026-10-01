@@ -68,6 +68,114 @@ export function primarySeasonIndex(seasons: Season[]): number {
   );
 }
 
+/** Result of merging a Jikan chain into an anime's seasons during a check. */
+export type ChainMerge = {
+  /** Same array when nothing changed. */
+  seasons: Season[];
+  /** Announced seasons added as unreleased. */
+  added: Season[];
+  /** Saved unreleased seasons whose release date changed. */
+  rescheduled: Season[];
+  /** Saved unreleased seasons that premiered, already converted. */
+  premiered: Season[];
+  /** Released seasons not in the library, left for the user to confirm. */
+  available: ChainSeason[];
+};
+
+/**
+ * Applies a check's chain to an anime's seasons: adds announced ones, refreshes or premieres saved
+ * unreleased ones, and lists released ones for confirmation. `known` holds malIds already in the
+ * library (or seen in this check) that must be ignored. Never removes seasons.
+ */
+export function mergeChainIntoSeasons(
+  seasons: Season[],
+  chain: ChainSeason[],
+  known: ReadonlySet<number>,
+  makeId: () => string = uid,
+): ChainMerge {
+  const result: ChainMerge = {
+    seasons,
+    added: [],
+    rescheduled: [],
+    premiered: [],
+    available: [],
+  };
+  const next = [...seasons];
+  let changed = false;
+  const handled = new Set<number>();
+  for (const c of chain) {
+    if (handled.has(c.malId)) continue;
+    handled.add(c.malId);
+    const index = next.findIndex((s) => s.malId === c.malId);
+    const own = index === -1 ? undefined : next[index];
+    if (own) {
+      if (!isUnreleased(own)) continue;
+      if (isNotYetAired(c.status)) {
+        const imageUrl = c.imageUrl ?? own.imageUrl;
+        const dateChanged = (own.releaseDate ?? null) !== c.releaseDate;
+        if (
+          !dateChanged &&
+          (own.releasePrecision ?? null) === c.releasePrecision &&
+          imageUrl === own.imageUrl
+        ) {
+          continue;
+        }
+        const updated = {
+          ...own,
+          releaseDate: c.releaseDate,
+          releasePrecision: c.releasePrecision,
+          imageUrl,
+        };
+        next[index] = updated;
+        changed = true;
+        if (dateChanged) result.rescheduled.push(updated);
+      } else {
+        const { unreleased: _u, releaseDate: _d, releasePrecision: _p, ...rest } = own;
+        const premiered: Season = {
+          ...rest,
+          year: c.year,
+          malScore: c.malScore,
+          type: c.type,
+          episodes: c.episodes,
+          durationMin: c.durationMin,
+          imageUrl: c.imageUrl ?? own.imageUrl ?? null,
+        };
+        next[index] = premiered;
+        changed = true;
+        result.premiered.push(premiered);
+      }
+      continue;
+    }
+    if (known.has(c.malId)) continue;
+    if (isNotYetAired(c.status)) {
+      const added = seasonFromChain(c, makeId);
+      next.push(added);
+      changed = true;
+      result.added.push(added);
+    } else {
+      result.available.push(c);
+    }
+  }
+  if (changed) result.seasons = next;
+  return result;
+}
+
+/** Release date written at its precision: "01 de out. de 2027", "out. de 2027", "2027" or "sem data". */
+export function formatReleaseDate(
+  dateStr: string | null | undefined,
+  precision: ReleasePrecision | null | undefined,
+): string {
+  if (!isValidIsoDate(dateStr)) return "sem data";
+  if (precision === "year") return dateStr.slice(0, 4);
+  if (precision === "month") {
+    return new Date(dateStr + "T00:00:00").toLocaleDateString("pt-BR", {
+      month: "short",
+      year: "numeric",
+    });
+  }
+  return formatDateBR(dateStr);
+}
+
 /** Só as temporadas lançadas. Devolve o mesmo array quando não há não lançadas. */
 export function releasedSeasons(seasons: Season[]): Season[] {
   return seasons.some(isUnreleased) ? seasons.filter((s) => !isUnreleased(s)) : seasons;

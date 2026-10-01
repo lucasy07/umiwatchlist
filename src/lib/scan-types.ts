@@ -1,3 +1,5 @@
+import type { ReleasePrecision } from "@/lib/anime-storage";
+
 export type FoundSeason = {
   parentId: string;
   parentName: string;
@@ -19,4 +21,30 @@ export type UpdatedSeason = {
   oldScore: number | null;
   newScore: number | null;
   filledFields: string[];
+};
+
+/** Announced season added or rescheduled by a check. */
+export type ScheduledSeason = {
+  parentId: string;
+  parentName: string;
+  title: string;
+  releaseDate: string | null;
+  releasePrecision: ReleasePrecision | null;
+};
+
+/** Unreleased season that premiered and was converted by a check. */
+export type PremieredSeason = {
+  parentId: string;
+  parentName: string;
+  title: string;
+  type: string | null;
+  year: number | null;
+};
+
+export type ScanResult = {
+  available: FoundSeason[];
+  scheduled: ScheduledSeason[];
+  premiered: PremieredSeason[];
+  aborted: boolean;
+  scanned: number;
 };

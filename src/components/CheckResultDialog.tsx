@@ -9,20 +9,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatDateBR, formatReleaseLabel } from "@/lib/anime-storage";
-import type { FoundSeason } from "@/lib/scan-types";
+import { formatReleaseDate, formatReleaseLabel } from "@/lib/anime-storage";
+import type { FoundSeason, PremieredSeason, ScheduledSeason } from "@/lib/scan-types";
 
 type CheckResultDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   aborted: { scanned: number; total: number } | null;
   available: FoundSeason[];
-  upcoming: Array<{
-    parentId: string;
-    parentName: string;
-    title: string;
-    releaseDate: string;
-  }>;
+  premiered: PremieredSeason[];
+  scheduled: ScheduledSeason[];
   onAdd: (found: FoundSeason) => void;
 };
 
@@ -31,7 +27,8 @@ export function CheckResultDialog({
   onOpenChange,
   aborted,
   available,
-  upcoming,
+  premiered,
+  scheduled,
   onAdd,
 }: CheckResultDialogProps) {
   return (
@@ -79,15 +76,43 @@ export function CheckResultDialog({
           </section>
           <section className="grid gap-2">
             <h3 className="font-display text-xs uppercase tracking-widest text-muted-foreground">
-              Em breve (marcadas nos cards)
+              Estrearam (viraram temporadas)
             </h3>
-            {upcoming.length === 0 ? (
+            {premiered.length === 0 ? (
               <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground">
-                Nenhuma continuação futura encontrada.
+                Nenhuma estreia desde a última verificação.
               </p>
             ) : (
               <ul className="grid gap-2">
-                {upcoming.map((u) => (
+                {premiered.map((p) => (
+                  <li
+                    key={`${p.parentId}-${p.title}`}
+                    className="overflow-hidden rounded-lg border border-border/60 bg-card-elevated p-2 min-w-0"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="line-clamp-2 text-sm font-medium">{p.title}</p>
+                      <p className="truncate text-[11px] text-muted-foreground">
+                        em {p.parentName}
+                        {p.type ? ` • ${p.type}` : ""}
+                        {p.year ? ` • ${p.year}` : ""}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+          <section className="grid gap-2">
+            <h3 className="font-display text-xs uppercase tracking-widest text-muted-foreground">
+              Em breve (salvas como não lançadas)
+            </h3>
+            {scheduled.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground">
+                Nenhuma continuação futura nova.
+              </p>
+            ) : (
+              <ul className="grid gap-2">
+                {scheduled.map((u) => (
                   <li
                     key={`${u.parentId}-${u.title}`}
                     className="overflow-hidden rounded-lg border border-border/60 bg-card-elevated p-2 min-w-0"
@@ -95,8 +120,10 @@ export function CheckResultDialog({
                     <div className="min-w-0 flex-1">
                       <p className="line-clamp-2 text-sm font-medium">{u.title}</p>
                       <p className="truncate text-[11px] text-muted-foreground">
-                        em {u.parentName} • {formatDateBR(u.releaseDate)} •{" "}
-                        {formatReleaseLabel(u.releaseDate)}
+                        em {u.parentName} • {formatReleaseDate(u.releaseDate, u.releasePrecision)}
+                        {u.releaseDate && (u.releasePrecision ?? "day") === "day"
+                          ? ` • ${formatReleaseLabel(u.releaseDate)}`
+                          : ""}
                       </p>
                     </div>
                   </li>

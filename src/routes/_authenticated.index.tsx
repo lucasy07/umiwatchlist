@@ -65,7 +65,6 @@ import {
   type CreateAnimeInput,
   type Season,
   type Tier,
-  type UpcomingSeason,
   TIER_VALUE,
   compareTierlistOrder,
   fetchAnimes,
@@ -80,6 +79,8 @@ import {
   updateLastCheckedAt,
   setWatched,
   importLegacyIfNeeded,
+  isUnreleased,
+  mergeChainIntoSeasons,
   uid,
   mediaMAL,
   nextRelease,
@@ -142,7 +143,13 @@ import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SegmentedToggle } from "@/components/SegmentedToggle";
 import { withViewTransition } from "@/lib/view-transition";
-import type { FoundSeason, UpdatedSeason } from "@/lib/scan-types";
+import type {
+  FoundSeason,
+  PremieredSeason,
+  ScanResult,
+  ScheduledSeason,
+  UpdatedSeason,
+} from "@/lib/scan-types";
 import { formatScore, scoreColor } from "@/lib/score-format";
 
 const TIER_ROWS = (Object.keys(TIER_VALUE) as Tier[]).sort((a, b) => TIER_VALUE[b] - TIER_VALUE[a]);
@@ -212,6 +219,11 @@ function Index() {
   const { setStep } = useBootProgress();
 
   const [animes, setAnimes] = useState<Anime[]>([]);
+  // Latest animes for long async flows (the season check) that must not write stale snapshots.
+  const animesRef = useRef<Anime[]>(animes);
+  useEffect(() => {
+    animesRef.current = animes;
+  }, [animes]);
   const [hydrated, setHydrated] = useState(false);
   const [search, setSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -288,9 +300,8 @@ function Index() {
   const [checkAborted, setCheckAborted] = useState<{ scanned: number; total: number } | null>(null);
   const [checkDialogOpen, setCheckDialogOpen] = useState(false);
   const [foundAvailable, setFoundAvailable] = useState<FoundSeason[]>([]);
-  const [foundUpcoming, setFoundUpcoming] = useState<
-    Array<{ parentId: string; parentName: string; title: string; releaseDate: string }>
-  >([]);
+  const [foundScheduled, setFoundScheduled] = useState<ScheduledSeason[]>([]);
+  const [foundPremiered, setFoundPremiered] = useState<PremieredSeason[]>([]);
   const scanAbortRef = useRef<AbortController | null>(null);
   const [updatingMalScores, setUpdatingMalScores] = useState(false);
   const [malScoreProgress, setMalScoreProgress] = useState<{
@@ -898,70 +909,73 @@ function Index() {
     targets: Anime[],
     onProgress?: (current: number, total: number) => void,
     signal?: AbortSignal,
-  ) {
-    const existing = new Set<number>();
-    for (const a of animes) {
-      if (a.malId) existing.add(a.malId);
-      for (const s of a.seasons) if (s.malId) existing.add(s.malId);
-    }
-    const available: FoundSeason[] = [];
-    const upcomingSaved: Array<{
-      parentId: string;
-      parentName: string;
-      title: string;
-      releaseDate: string;
-    }> = [];
-    let scanned = 0;
+  ): Promise<ScanResult> {
+    const result: ScanResult = {
+      available: [],
+      scheduled: [],
+      premiered: [],
+      aborted: false,
+      scanned: 0,
+    };
+    // malIds already handled in this check, so a franchise shared by two targets is reported once.
+    const seen = new Set<number>();
     for (let i = 0; i < targets.length; i++) {
       const a = targets[i];
       try {
+        const known = new Set(seen);
+        for (const x of animesRef.current) {
+          if (x.malId) known.add(x.malId);
+          for (const s of x.seasons) if (s.malId) known.add(s.malId);
+        }
+        // Unreleased seasons of the target are fetched again to refresh their date or premiere.
+        const refetch = new Set(
+          (animesRef.current.find((x) => x.id === a.id) ?? a).seasons
+            .filter((s) => isUnreleased(s) && s.malId)
+            .map((s) => s.malId),
+        );
         const chain = await buildChain(a.malId!, undefined, signal, {
-          knownMalIds: existing,
+          knownMalIds: new Set([...known].filter((id) => !refetch.has(id))),
         });
-        for (const s of chain) {
-          existing.add(s.malId);
-          const notAired =
-            typeof s.status === "string" && s.status.toLowerCase().includes("not yet");
-          if (notAired) {
-            const iso = s.airedFrom ? s.airedFrom.slice(0, 10) : s.year ? `${s.year}-01-01` : null;
-            if (!iso) continue;
-            let shouldSave = false;
-            const current = a.upcoming;
-            const currentSource = current?.source ?? "manual";
-            if (!current) {
-              shouldSave = true;
-            } else if (currentSource === "manual") {
-              shouldSave = false;
-            } else {
-              const cur = new Date(current.releaseDate).getTime();
-              const nu = new Date(iso).getTime();
-              if (Number.isFinite(nu) && Number.isFinite(cur) && nu < cur) shouldSave = true;
+        // Apply to the latest state, not the snapshot from the start of a long check.
+        const latest = animesRef.current.find((x) => x.id === a.id);
+        if (latest) {
+          const merge = mergeChainIntoSeasons(latest.seasons, chain, known);
+          let saved = merge.seasons === latest.seasons;
+          if (!saved) {
+            try {
+              await updateSeasons(a.id, merge.seasons);
+              setAnimes((prev) =>
+                prev.map((x) => (x.id === a.id ? { ...x, seasons: merge.seasons } : x)),
+              );
+              saved = true;
+            } catch (err) {
+              console.error("failed to persist checked seasons for", a.name, err);
             }
-            if (shouldSave) {
-              const upcoming: UpcomingSeason = {
-                title: s.title,
-                releaseDate: iso,
-                source: "auto",
-                malId: s.malId,
-              };
-              try {
-                await updateUpcoming(a.id, upcoming);
-                setAnimes((prev) => prev.map((x) => (x.id === a.id ? { ...x, upcoming } : x)));
-                a.upcoming = upcoming;
-                upcomingSaved.push({
-                  parentId: a.id,
-                  parentName: a.name,
-                  title: s.title,
-                  releaseDate: iso,
-                });
-              } catch (err) {
-                console.error(err);
-              }
+          }
+          if (saved) {
+            for (const s of [...merge.added, ...merge.rescheduled]) {
+              result.scheduled.push({
+                parentId: a.id,
+                parentName: latest.name,
+                title: s.name,
+                releaseDate: s.releaseDate ?? null,
+                releasePrecision: s.releasePrecision ?? null,
+              });
             }
-          } else {
-            available.push({
+            for (const s of merge.premiered) {
+              result.premiered.push({
+                parentId: a.id,
+                parentName: latest.name,
+                title: s.name,
+                type: s.type ?? null,
+                year: s.year ?? null,
+              });
+            }
+          }
+          for (const s of merge.available) {
+            result.available.push({
               parentId: a.id,
-              parentName: a.name,
+              parentName: latest.name,
               malId: s.malId,
               title: s.title,
               malScore: s.malScore,
@@ -973,6 +987,7 @@ function Index() {
             });
           }
         }
+        for (const s of chain) seen.add(s.malId);
         try {
           const iso = new Date().toISOString();
           await updateLastCheckedAt(a.id, iso);
@@ -980,8 +995,8 @@ function Index() {
         } catch (err) {
           console.error("failed to persist last checked for", a.name, err);
         }
-        scanned += 1;
-        onProgress?.(scanned, targets.length);
+        result.scanned += 1;
+        onProgress?.(result.scanned, targets.length);
       } catch (err) {
         const aborted =
           (err instanceof DOMException && err.name === "AbortError") ||
@@ -990,7 +1005,23 @@ function Index() {
         console.error("check chain failed for", a.name, err);
       }
     }
-    return { available, upcomingSaved, aborted: signal?.aborted ?? false, scanned };
+    result.aborted = signal?.aborted ?? false;
+    return result;
+  }
+
+  function showScanResult(result: ScanResult) {
+    if (
+      result.available.length === 0 &&
+      result.scheduled.length === 0 &&
+      result.premiered.length === 0
+    ) {
+      toast(result.aborted ? "Verificação cancelada" : "Nenhuma temporada nova encontrada");
+      return;
+    }
+    setFoundAvailable(result.available);
+    setFoundScheduled(result.scheduled);
+    setFoundPremiered(result.premiered);
+    setCheckDialogOpen(true);
   }
 
   async function checkNewSeasons() {
@@ -1009,17 +1040,7 @@ function Index() {
     setCheckProgress({ current: 0, total: targets.length });
     const ac = new AbortController();
     scanAbortRef.current = ac;
-    let result: {
-      available: FoundSeason[];
-      upcomingSaved: Array<{
-        parentId: string;
-        parentName: string;
-        title: string;
-        releaseDate: string;
-      }>;
-      aborted: boolean;
-      scanned: number;
-    };
+    let result: ScanResult;
     try {
       result = await scanTargets(
         targets,
@@ -1032,13 +1053,7 @@ function Index() {
       scanAbortRef.current = null;
     }
     if (result.aborted) setCheckAborted({ scanned: result.scanned, total: targets.length });
-    if (result.available.length === 0 && result.upcomingSaved.length === 0) {
-      toast(result.aborted ? "Verificação cancelada" : "Nenhuma temporada nova encontrada");
-      return;
-    }
-    setFoundAvailable(result.available);
-    setFoundUpcoming(result.upcomingSaved);
-    setCheckDialogOpen(true);
+    showScanResult(result);
   }
 
   async function checkNewSeasonsForAnime(animeId: string) {
@@ -1051,27 +1066,13 @@ function Index() {
     }
     setCheckAborted(null);
     setCheckingId(animeId);
-    let result: {
-      available: FoundSeason[];
-      upcomingSaved: Array<{
-        parentId: string;
-        parentName: string;
-        title: string;
-        releaseDate: string;
-      }>;
-    };
+    let result: ScanResult;
     try {
       result = await scanTargets([anime]);
     } finally {
       setCheckingId(null);
     }
-    if (result.available.length === 0 && result.upcomingSaved.length === 0) {
-      toast("Nenhuma temporada nova encontrada");
-      return;
-    }
-    setFoundAvailable(result.available);
-    setFoundUpcoming(result.upcomingSaved);
-    setCheckDialogOpen(true);
+    showScanResult(result);
   }
 
   async function updateMalScores() {
@@ -2598,7 +2599,8 @@ function Index() {
         onOpenChange={setCheckDialogOpen}
         aborted={checkAborted}
         available={foundAvailable}
-        upcoming={foundUpcoming}
+        premiered={foundPremiered}
+        scheduled={foundScheduled}
         onAdd={addFoundSeason}
       />
 
