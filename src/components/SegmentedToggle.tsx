@@ -32,7 +32,7 @@ export function SegmentedToggle<T extends string>({
       <span
         aria-hidden="true"
         className={`pointer-events-none absolute inset-y-0.5 left-0.5 w-[calc(50%-0.125rem)] rounded-md bg-primary motion-reduce:transition-none ${
-          transitionsEnabled ? "transition-transform duration-[260ms] ease-spring" : ""
+          transitionsEnabled ? "transition-transform duration-slow ease-spring" : ""
         } ${activeIndex === 1 ? "translate-x-full" : "translate-x-0"}`}
       />
       {options.map((option) => {
@@ -45,7 +45,7 @@ export function SegmentedToggle<T extends string>({
             onClick={() => onChange(option.value)}
             aria-label={option.ariaLabel}
             aria-pressed={active}
-            className={`focus-ring relative z-10 flex h-11 min-w-11 items-center justify-center rounded-md px-2.5 text-xs font-medium transition-colors duration-[180ms] hover:bg-transparent motion-reduce:transition-none sm:h-8 sm:min-w-8 [&:has(>svg)]:w-11 [&:has(>svg)]:px-0 sm:[&:has(>svg)]:w-8 ${
+            className={`focus-ring relative z-10 flex h-11 min-w-11 items-center justify-center rounded-md px-2.5 text-xs font-medium transition-colors duration-fast hover:bg-transparent motion-reduce:transition-none sm:h-8 sm:min-w-8 [&:has(>svg)]:w-11 [&:has(>svg)]:px-0 sm:[&:has(>svg)]:w-8 ${
               active
                 ? "text-primary-foreground hover:text-primary-foreground"
                 : "text-muted-foreground hover:text-foreground"

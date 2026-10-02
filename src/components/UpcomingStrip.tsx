@@ -192,7 +192,7 @@ function UpcomingStripEntry({
           </span>
         </div>
 
-        <div className="relative mt-1.5 aspect-[2/3] overflow-hidden rounded-lg border border-border transition-[translate,border-color] duration-200 ease-out-soft group-hover/button:border-border-interactive group-focus-visible/button:border-border-interactive motion-safe:group-hover/button:-translate-y-0.5 motion-reduce:transition-none">
+        <div className="relative mt-1.5 aspect-[2/3] overflow-hidden rounded-lg border border-border transition-[translate,border-color] duration-base ease-out-soft group-hover/button:border-border-interactive group-focus-visible/button:border-border-interactive motion-safe:group-hover/button:-translate-y-0.5 motion-reduce:transition-none">
           {cover ? (
             <img src={cover} alt="" loading="lazy" className="h-full w-full object-cover" />
           ) : (

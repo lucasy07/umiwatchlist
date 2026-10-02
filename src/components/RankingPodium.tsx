@@ -60,7 +60,7 @@ export function RankingPodium({
             idx={idx}
             className={`${PLACE_CLASS[idx] ?? ""} ${
               animateRankingItems
-                ? "animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-300 motion-reduce:animate-none"
+                ? "animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-slow motion-reduce:animate-none"
                 : ""
             } ${highlightId === anime.id ? "card-flash" : ""} ${
               watchedFlashId === anime.id ? "watched-card-flash" : ""
@@ -163,7 +163,7 @@ function PodiumCard({
               <img
                 src={cover}
                 alt=""
-                className="h-full w-full object-cover transition-transform duration-500 motion-safe:group-hover:scale-105"
+                className="h-full w-full object-cover transition-transform duration-emphasis motion-safe:group-hover:scale-105"
                 loading="lazy"
               />
             ) : (
@@ -282,7 +282,7 @@ function PodiumBanner({ anime }: { anime: Anime }) {
       src={banner}
       alt=""
       onLoad={() => setLoadedSrc(banner)}
-      className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 motion-reduce:transition-none ${
+      className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-emphasis motion-reduce:transition-none ${
         loadedSrc === banner ? "opacity-100" : "opacity-0"
       }`}
     />

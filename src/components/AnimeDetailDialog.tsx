@@ -112,7 +112,7 @@ export function AnimeDetailDialog({
                   src={image}
                   alt=""
                   aria-hidden="true"
-                  className={`absolute inset-[-40px] h-[calc(100%+80px)] w-[calc(100%+80px)] max-w-none scale-110 object-cover blur-2xl transition-opacity duration-500 motion-reduce:transition-none ${
+                  className={`absolute inset-[-40px] h-[calc(100%+80px)] w-[calc(100%+80px)] max-w-none scale-110 object-cover blur-2xl transition-opacity duration-emphasis motion-reduce:transition-none ${
                     bannerLoaded ? "opacity-0" : "opacity-60"
                   }`}
                 />
@@ -124,7 +124,7 @@ export function AnimeDetailDialog({
                   aria-hidden="true"
                   onLoad={() => setLoadedSrc(banner)}
                   onError={() => setLoadedSrc(null)}
-                  className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-500 motion-reduce:transition-none ${
+                  className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-emphasis motion-reduce:transition-none ${
                     bannerLoaded ? "opacity-100" : "opacity-0"
                   }`}
                 />
@@ -138,7 +138,7 @@ export function AnimeDetailDialog({
               {banner && (
                 <div
                   aria-hidden="true"
-                  className={`absolute inset-0 transition-opacity duration-500 motion-reduce:transition-none ${
+                  className={`absolute inset-0 transition-opacity duration-emphasis motion-reduce:transition-none ${
                     bannerLoaded ? "opacity-100" : "opacity-0"
                   }`}
                   style={{ background: "var(--gradient-hero-banner-scrim)" }}
@@ -261,7 +261,7 @@ export function AnimeDetailDialog({
                 src={image}
                 alt={anime.name}
                 hidden={bannerLoaded}
-                className={`absolute bottom-7 right-8 z-10 hidden w-44 transition-opacity duration-300 motion-reduce:transition-none sm:block ${
+                className={`absolute bottom-7 right-8 z-10 hidden w-44 transition-opacity duration-slow motion-reduce:transition-none sm:block ${
                   bannerLoaded ? "pointer-events-none opacity-0" : ""
                 }`}
               />

@@ -404,7 +404,7 @@ export function StatsDialog({ animes: allAnimes, open, onOpenChange }: StatsDial
                           <div className="min-w-0 flex-1">
                             <div className="h-2.5 w-full overflow-hidden rounded-full bg-foreground/5">
                               <div
-                                className="h-full rounded-full bg-primary/60 transition-[width] duration-500 ease-out-soft motion-reduce:transition-none"
+                                className="h-full rounded-full bg-primary/60 transition-[width] duration-emphasis ease-out-soft motion-reduce:transition-none"
                                 style={{ width: `${(a.minutes / a.max) * 100}%` }}
                               />
                             </div>
@@ -433,7 +433,7 @@ export function StatsDialog({ animes: allAnimes, open, onOpenChange }: StatsDial
                         <div className="min-w-0 flex-1">
                           <div className="h-2.5 w-full overflow-hidden rounded-full bg-foreground/5">
                             <div
-                              className={`h-full rounded-full transition-[width] duration-500 ease-out-soft motion-reduce:transition-none ${tierBg(t.tier)}`}
+                              className={`h-full rounded-full transition-[width] duration-emphasis ease-out-soft motion-reduce:transition-none ${tierBg(t.tier)}`}
                               style={{ width: `${(t.minutes / t.max) * 100}%` }}
                             />
                           </div>
@@ -461,7 +461,7 @@ export function StatsDialog({ animes: allAnimes, open, onOpenChange }: StatsDial
                           <div className="min-w-0 flex-1">
                             <div className="h-2.5 w-full overflow-hidden rounded-full bg-foreground/5">
                               <div
-                                className="h-full rounded-full bg-primary/60 transition-[width] duration-500 ease-out-soft motion-reduce:transition-none"
+                                className="h-full rounded-full bg-primary/60 transition-[width] duration-emphasis ease-out-soft motion-reduce:transition-none"
                                 style={{ width: `${(g.minutes / g.max) * 100}%` }}
                               />
                             </div>
@@ -645,7 +645,7 @@ export function StatsDialog({ animes: allAnimes, open, onOpenChange }: StatsDial
                       <div className="flex-1">
                         <div className="h-2.5 w-full overflow-hidden rounded-full bg-foreground/5">
                           <div
-                            className={`h-full rounded-full transition-[width] duration-500 ease-out-soft motion-reduce:transition-none ${
+                            className={`h-full rounded-full transition-[width] duration-emphasis ease-out-soft motion-reduce:transition-none ${
                               isNone ? "bg-muted-foreground/40" : tierBg(d.tier as Tier)
                             }`}
                             style={{ width: `${pct}%` }}
@@ -686,7 +686,7 @@ export function StatsDialog({ animes: allAnimes, open, onOpenChange }: StatsDial
                         <div className="flex-1">
                           <div className="h-2.5 w-full overflow-hidden rounded-full bg-foreground/5">
                             <div
-                              className="h-full rounded-full bg-primary/60 transition-[width] duration-500 ease-out-soft motion-reduce:transition-none"
+                              className="h-full rounded-full bg-primary/60 transition-[width] duration-emphasis ease-out-soft motion-reduce:transition-none"
                               style={{ width: `${pct}%` }}
                             />
                           </div>
@@ -742,7 +742,7 @@ export function StatsDialog({ animes: allAnimes, open, onOpenChange }: StatsDial
                         <div className="flex-1">
                           <div className="h-2.5 w-full overflow-hidden rounded-full bg-foreground/5">
                             <div
-                              className="h-full rounded-full bg-primary/60 transition-[width] duration-500 ease-out-soft motion-reduce:transition-none"
+                              className="h-full rounded-full bg-primary/60 transition-[width] duration-emphasis ease-out-soft motion-reduce:transition-none"
                               style={{ width: `${pct}%` }}
                             />
                           </div>

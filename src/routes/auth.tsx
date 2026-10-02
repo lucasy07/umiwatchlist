@@ -288,7 +288,7 @@ function AuthPage() {
       {/* Scrollable layer — covers full viewport, contains the form */}
       <div className="relative z-10 flex h-full w-full overflow-y-auto">
         <main className="auth-main flex min-h-full w-full flex-col items-center justify-center px-6 py-12 lg:w-[45%] lg:py-0">
-          <div className="w-full max-w-[368px] animate-in fade-in slide-in-from-left-6 duration-500 motion-reduce:animate-none">
+          <div className="w-full max-w-[368px] animate-in fade-in slide-in-from-left-6 duration-emphasis motion-reduce:animate-none">
             <img
               src={umiLockup}
               alt=""

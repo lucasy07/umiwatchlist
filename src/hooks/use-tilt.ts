@@ -16,7 +16,7 @@ export function useTilt(options?: { max?: number; perspective?: number; scale?: 
   const reset = useCallback((el: HTMLElement) => {
     el.style.transform = "";
     el.style.willChange = "";
-    el.style.transition = "transform 180ms ease-out";
+    el.style.transition = "transform var(--motion-duration-fast) var(--motion-out-soft)";
   }, []);
 
   const onMouseMove = useCallback(

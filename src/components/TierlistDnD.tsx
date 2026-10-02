@@ -9,7 +9,7 @@ import { prefersReducedMotion } from "@/lib/tier-drop-animation";
 export function CoverArt({ anime }: { anime: Anime }) {
   const img = anime.cover ?? anime.imageUrl;
   return (
-    <div className="relative overflow-hidden rounded-lg ring-1 ring-border/50 transition-transform duration-200 motion-safe:group-hover:scale-105 group-hover:ring-primary/50">
+    <div className="relative overflow-hidden rounded-lg ring-1 ring-border/50 transition-transform duration-base motion-safe:group-hover:scale-105 group-hover:ring-primary/50">
       {img ? (
         <img src={img} alt={anime.name} loading="lazy" className="aspect-[2/3] w-20 object-cover" />
       ) : (
@@ -17,7 +17,7 @@ export function CoverArt({ anime }: { anime: Anime }) {
           <ImageIcon className="h-5 w-5" />
         </div>
       )}
-      <div className="absolute inset-x-0 bottom-0 p-1.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 bg-gradient-to-t from-background/95 to-transparent">
+      <div className="absolute inset-x-0 bottom-0 p-1.5 opacity-0 transition-opacity duration-base group-hover:opacity-100 group-focus-visible:opacity-100 bg-gradient-to-t from-background/95 to-transparent">
         <span className="line-clamp-2 text-[10px] font-medium leading-tight text-foreground">
           {anime.name}
         </span>
@@ -55,7 +55,7 @@ export function DraggableCover({
       onClick={() => onOpen(anime.id)}
       aria-label={anime.name}
       title={anime.name}
-      className={`group relative focus-ring w-20 animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-300 motion-reduce:animate-none appearance-none border-0 bg-transparent p-0 text-left touch-none ${
+      className={`group relative focus-ring w-20 animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-slow motion-reduce:animate-none appearance-none border-0 bg-transparent p-0 text-left touch-none ${
         isDragging ? "opacity-40" : ""
       } ${
         highlighted
@@ -97,7 +97,7 @@ export function TierDropRow({
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative flex min-h-20 items-stretch transition-colors duration-150 motion-reduce:transition-none ${
+      className={`relative flex min-h-20 items-stretch transition-colors duration-fast motion-reduce:transition-none ${
         isOver ? "bg-primary/5 ring-1 ring-inset ring-primary/40" : ""
       } ${className ?? ""}`}
     >

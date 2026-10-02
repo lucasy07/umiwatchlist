@@ -10,7 +10,7 @@ export type EmptyStateProps = {
 
 export function EmptyState({ icon: Icon, title, description, action }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 px-6 py-16 text-center animate-in fade-in-0 slide-in-from-bottom-2 duration-300 motion-reduce:animate-none sm:py-20">
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 px-6 py-16 text-center animate-in fade-in-0 slide-in-from-bottom-2 duration-slow motion-reduce:animate-none sm:py-20">
       <div className="relative mb-4">
         <div aria-hidden className="absolute inset-0 rounded-full bg-primary/20 blur-2xl" />
         <div

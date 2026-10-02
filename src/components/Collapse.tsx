@@ -35,7 +35,7 @@ export function Collapse({ open, children }: { open: boolean; children: ReactNod
           setPresent(false);
         }
       }}
-      className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out-soft motion-reduce:transition-none ${
+      className={`grid transition-[grid-template-rows,opacity] duration-base ease-out-soft motion-reduce:transition-none ${
         expanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
       }`}
     >

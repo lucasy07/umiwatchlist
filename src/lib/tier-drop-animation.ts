@@ -5,13 +5,20 @@ export function prefersReducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
+function rootVar(name: string) {
+  if (typeof document === "undefined") return "";
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
 /** Valor de `--motion-spring` (styles.css); a Web Animations API não aceita var(). */
 function springEasing() {
-  const value =
-    typeof document === "undefined"
-      ? ""
-      : getComputedStyle(document.documentElement).getPropertyValue("--motion-spring").trim();
-  return value || "ease-out";
+  return rootVar("--motion-spring") || "ease-out";
+}
+
+/** `--motion-duration-slow` em ms; o dnd-kit pede número. */
+function slowDurationMs() {
+  const ms = Number.parseFloat(rootVar("--motion-duration-slow"));
+  return Number.isFinite(ms) ? ms : 300;
 }
 
 /**
@@ -21,7 +28,7 @@ function springEasing() {
 export function tierDropAnimation(): DropAnimation | null {
   if (prefersReducedMotion()) return null;
   return {
-    duration: 260,
+    duration: slowDurationMs(),
     easing: springEasing(),
     sideEffects: defaultDropAnimationSideEffects({
       styles: { active: { opacity: "0" } },

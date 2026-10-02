@@ -216,7 +216,7 @@ function TiltCardInner({
       onMouseLeave={tilt.onMouseLeave}
       className={`group relative overflow-hidden rounded-2xl border ${
         tierS ? "border-tier-s/70 ring-1 ring-inset ring-tier-s/40" : "border-border/60"
-      } transition-[border-color,box-shadow] duration-200 hover:border-primary/50 hover:shadow-[var(--shadow-elegant)]`}
+      } transition-[border-color,box-shadow] duration-base hover:border-primary/50 hover:shadow-[var(--shadow-elegant)]`}
       style={{
         background: "var(--gradient-card)",
         boxShadow: "var(--shadow-card)",
@@ -2129,7 +2129,7 @@ function Index() {
                     <li
                       key={anime.id}
                       id={`anime-${anime.id}`}
-                      className={`${animateRankingItems ? "animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-300 motion-reduce:animate-none" : ""} [transform-style:preserve-3d] ${
+                      className={`${animateRankingItems ? "animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-slow motion-reduce:animate-none" : ""} [transform-style:preserve-3d] ${
                         highlightId === anime.id ? "card-flash" : ""
                       } ${watchedFlashId === anime.id ? "watched-card-flash" : ""}`}
                       style={{
@@ -2154,7 +2154,7 @@ function Index() {
                               <img
                                 src={anime.cover ?? anime.imageUrl ?? undefined}
                                 alt={anime.name}
-                                className="h-full w-full object-cover transition-transform duration-500 motion-safe:group-hover:scale-105"
+                                className="h-full w-full object-cover transition-transform duration-emphasis motion-safe:group-hover:scale-105"
                                 loading="lazy"
                               />
                             ) : (
@@ -2230,7 +2230,7 @@ function Index() {
                               variant="secondary"
                               size="sm"
                               onClick={() => openAddSeason(anime.id)}
-                              className="h-11 flex-1 text-xs transition-[color,box-shadow] duration-200 hover:bg-primary/15 hover:text-primary hover:ring-1 hover:ring-primary/40 focus-visible:bg-primary/15 focus-visible:text-primary focus-visible:ring-1 focus-visible:ring-primary/40 active:bg-primary/25"
+                              className="h-11 flex-1 text-xs transition-[color,box-shadow] duration-base hover:bg-primary/15 hover:text-primary hover:ring-1 hover:ring-primary/40 focus-visible:bg-primary/15 focus-visible:text-primary focus-visible:ring-1 focus-visible:ring-primary/40 active:bg-primary/25"
                             >
                               <Plus className="mr-1 h-3.5 w-3.5" /> Temp.
                             </Button>
@@ -2292,7 +2292,7 @@ function Index() {
                               variant="secondary"
                               size="sm"
                               onClick={() => openAddSeason(anime.id)}
-                              className="h-8 flex-1 text-xs transition-[color,box-shadow] duration-200 hover:bg-primary/15 hover:text-primary hover:ring-1 hover:ring-primary/40 focus-visible:bg-primary/15 focus-visible:text-primary focus-visible:ring-1 focus-visible:ring-primary/40 active:bg-primary/25"
+                              className="h-8 flex-1 text-xs transition-[color,box-shadow] duration-base hover:bg-primary/15 hover:text-primary hover:ring-1 hover:ring-primary/40 focus-visible:bg-primary/15 focus-visible:text-primary focus-visible:ring-1 focus-visible:ring-primary/40 active:bg-primary/25"
                             >
                               <Plus className="mr-1 h-3.5 w-3.5" /> Temp.
                             </Button>
@@ -2393,7 +2393,7 @@ function Index() {
                     >
                       <span
                         key={anime.tier ?? "none"}
-                        className={`tier-badge-pop font-display font-bold transition-colors duration-200 motion-reduce:transition-none ${tierColor(anime.tier)}`}
+                        className={`tier-badge-pop font-display font-bold transition-colors duration-base motion-reduce:transition-none ${tierColor(anime.tier)}`}
                       >
                         {anime.tier ?? "—"}
                       </span>
@@ -2403,7 +2403,7 @@ function Index() {
                     <li
                       key={anime.id}
                       id={`anime-${anime.id}`}
-                      className={`group relative overflow-hidden rounded-2xl border border-border/60 transition-[translate,border-color,box-shadow] ${animateRankingItems ? "animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-300 motion-reduce:animate-none" : ""} motion-safe:hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[var(--shadow-elegant)] ${
+                      className={`group relative overflow-hidden rounded-2xl border border-border/60 transition-[translate,border-color,box-shadow] ${animateRankingItems ? "animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-slow motion-reduce:animate-none" : ""} motion-safe:hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[var(--shadow-elegant)] ${
                         highlightId === anime.id ? "card-flash" : ""
                       } ${watchedFlashId === anime.id ? "watched-card-flash" : ""}`}
                       style={{
@@ -2419,7 +2419,7 @@ function Index() {
                     >
                       <span
                         aria-hidden="true"
-                        className={`pointer-events-none absolute inset-y-0 left-0 w-[6px] bg-tier-s transition-opacity duration-200 motion-reduce:transition-none ${
+                        className={`pointer-events-none absolute inset-y-0 left-0 w-[6px] bg-tier-s transition-opacity duration-base motion-reduce:transition-none ${
                           anime.tier === "S" ? "opacity-100" : "opacity-0"
                         }`}
                       />
@@ -2451,7 +2451,7 @@ function Index() {
                             <img
                               src={anime.cover ?? anime.imageUrl ?? undefined}
                               alt={anime.name}
-                              className="h-full w-full object-cover transition-transform duration-500 motion-safe:group-hover:scale-105"
+                              className="h-full w-full object-cover transition-transform duration-emphasis motion-safe:group-hover:scale-105"
                               loading="lazy"
                             />
                           ) : (
@@ -2547,7 +2547,7 @@ function Index() {
                           aria-expanded={isOpen}
                         >
                           <ChevronDown
-                            className={`h-5 w-5 transition-transform duration-200 ease-spring motion-reduce:transition-none ${isOpen ? "rotate-180" : ""}`}
+                            className={`h-5 w-5 transition-transform duration-base ease-spring motion-reduce:transition-none ${isOpen ? "rotate-180" : ""}`}
                           />
                         </Button>
                       </div>
@@ -2679,7 +2679,7 @@ function Index() {
                 setFabOpen(false);
                 openAddSeason();
               }}
-              className="focus-ring flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-medium shadow-lg transition-transform motion-safe:hover:scale-105 animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-200 ease-spring motion-reduce:animate-none"
+              className="focus-ring flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-medium shadow-lg transition-transform motion-safe:hover:scale-105 animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-base ease-spring motion-reduce:animate-none"
               style={{ animationDelay: "40ms" }}
             >
               <Tv className="h-4 w-4 text-primary" /> Temporada
@@ -2689,7 +2689,7 @@ function Index() {
                 setFabOpen(false);
                 setAnimeDialogOpen(true);
               }}
-              className="focus-ring flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-medium shadow-lg transition-transform motion-safe:hover:scale-105 animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-200 ease-spring motion-reduce:animate-none"
+              className="focus-ring flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-medium shadow-lg transition-transform motion-safe:hover:scale-105 animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-base ease-spring motion-reduce:animate-none"
             >
               <Sparkles className="h-4 w-4 text-primary" /> Anime
             </button>
@@ -2702,7 +2702,7 @@ function Index() {
           aria-label="Adicionar"
         >
           <Plus
-            className={`h-7 w-7 transition-transform duration-200 ease-spring motion-reduce:transition-none ${fabOpen ? "rotate-45" : ""}`}
+            className={`h-7 w-7 transition-transform duration-base ease-spring motion-reduce:transition-none ${fabOpen ? "rotate-45" : ""}`}
           />
         </button>
       </div>
@@ -2954,7 +2954,7 @@ function RankingSkeleton({
       <div
         role="status"
         aria-busy="true"
-        className="animate-in fade-in-0 duration-150 motion-reduce:animate-none"
+        className="animate-in fade-in-0 duration-fast motion-reduce:animate-none"
       >
         <span className="sr-only">Carregando…</span>
         <div className="overflow-hidden rounded-xl border border-border/60">
@@ -2993,7 +2993,7 @@ function RankingSkeleton({
       <div
         role="status"
         aria-busy="true"
-        className="animate-in fade-in-0 duration-150 motion-reduce:animate-none"
+        className="animate-in fade-in-0 duration-fast motion-reduce:animate-none"
       >
         <span className="sr-only">Carregando…</span>
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
@@ -3029,7 +3029,7 @@ function RankingSkeleton({
     <div
       role="status"
       aria-busy="true"
-      className="animate-in fade-in-0 duration-150 motion-reduce:animate-none"
+      className="animate-in fade-in-0 duration-fast motion-reduce:animate-none"
     >
       <span className="sr-only">Carregando…</span>
       <ul className="grid gap-4">
