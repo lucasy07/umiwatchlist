@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useBootProgress } from "@/boot/BootProgress";
 
@@ -239,8 +239,17 @@ function Index() {
     animesRef.current = animes;
   }, [animes]);
   const [hydrated, setHydrated] = useState(false);
+  // A busca filtra o ranking inteiro, renderizado aqui mesmo. O campo é não controlado e o
+  // filtro roda em transição: a digitação não espera a lista, e a próxima tecla interrompe
+  // a renderização em andamento. `hasSearchText` só muda no primeiro/último caractere.
   const [search, setSearch] = useState("");
+  const [hasSearchText, setHasSearchText] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  function clearSearch() {
+    if (searchInputRef.current) searchInputRef.current.value = "";
+    setHasSearchText(false);
+    setSearch("");
+  }
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [scoreMode, setScoreMode] = useState<"mal" | "gosto">("mal");
@@ -596,7 +605,7 @@ function Index() {
         action: {
           label: "Ver",
           onClick: () => {
-            setSearch("");
+            clearSearch();
             clearFilters();
             setTimeout(() => revealAnime(created.id), 0);
           },
@@ -1588,26 +1597,29 @@ function Index() {
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               ref={searchInputRef}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setHasSearchText(value !== "");
+                startTransition(() => setSearch(value));
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Escape") {
                   e.preventDefault();
-                  setSearch("");
+                  clearSearch();
                   searchInputRef.current?.focus();
                 }
               }}
               placeholder="Buscar na sua coleção..."
               className={`h-11 border-border/60 bg-card pl-10 text-base placeholder:text-muted-foreground/70 focus-visible:ring-primary/40 ${
-                search !== "" ? "pr-12" : "pr-3"
+                hasSearchText ? "pr-12" : "pr-3"
               }`}
             />
-            {search !== "" && (
+            {hasSearchText && (
               <button
                 type="button"
                 aria-label="Limpar busca"
                 onClick={() => {
-                  setSearch("");
+                  clearSearch();
                   searchInputRef.current?.focus();
                 }}
                 className="focus-ring absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground sm:h-8 sm:w-8"
