@@ -83,7 +83,7 @@ import {
   isVaguePrecision,
   mergeChainIntoSeasons,
   enrichUnreleasedSeasons,
-  uid,
+  seasonFromChain,
   mediaMAL,
   nextRelease,
   releasedSeasons,
@@ -999,18 +999,7 @@ function Index() {
         }
       }
       for (const s of merge.available) {
-        result.available.push({
-          parentId: a.id,
-          parentName: latest.name,
-          malId: s.malId,
-          title: s.title,
-          malScore: s.malScore,
-          imageUrl: s.imageUrl,
-          type: s.type,
-          year: s.year,
-          episodes: s.episodes,
-          durationMin: s.durationMin,
-        });
+        result.available.push({ ...s, parentId: a.id, parentName: latest.name });
       }
     };
 
@@ -1368,18 +1357,7 @@ function Index() {
       setFoundAvailable((prev) => prev.filter((f) => f.malId !== found.malId));
       return;
     }
-    const newSeason: Season = {
-      id: uid(),
-      name: found.title,
-      malId: found.malId,
-      year: found.year,
-      malScore: found.malScore,
-      type: found.type,
-      episodes: found.episodes,
-      durationMin: found.durationMin,
-      imageUrl: found.imageUrl ?? null,
-    };
-    const newSeasons = [...target.seasons, newSeason];
+    const newSeasons = [...target.seasons, seasonFromChain(found)];
     setAnimes((prev) =>
       prev.map((a) => (a.id === found.parentId ? { ...a, seasons: newSeasons } : a)),
     );

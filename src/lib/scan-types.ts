@@ -1,17 +1,10 @@
 import type { ReleasePrecision } from "@/lib/anime-storage";
-import type { ChainReport } from "@/lib/jikan-chain";
+import type { ChainReport, ChainSeason } from "@/lib/jikan-chain";
 
-export type FoundSeason = {
+/** Released season a check found outside the anime; added through `seasonFromChain`. */
+export type FoundSeason = ChainSeason & {
   parentId: string;
   parentName: string;
-  malId: number;
-  title: string;
-  malScore: number | null;
-  imageUrl: string | null;
-  type: string | null;
-  year: number | null;
-  episodes: number | null;
-  durationMin: number | null;
 };
 
 export type UpdatedSeason = {

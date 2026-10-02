@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 
+import { mergeChainIntoSeasons, seasonFromChain } from "./anime-storage";
+import type { ChainSeason } from "./jikan-chain";
 import {
   classifyChain,
   combineCheckStatus,
   isOutageStreak,
   scanOutcome,
+  type FoundSeason,
   type ScanResult,
   type UncheckedAnime,
 } from "./scan-types";
@@ -125,5 +128,57 @@ describe("scanOutcome", () => {
     expect(
       scanOutcome(result({ scanned: 5, verified: 2, unchecked: failed, interruption: "outage" })),
     ).toBe("dialog");
+  });
+});
+
+describe("FoundSeason", () => {
+  const chainSeason = (overrides: Partial<ChainSeason> = {}): ChainSeason => ({
+    malId: 20,
+    title: "Frieren 2",
+    year: 2026,
+    malScore: 9.1,
+    imageUrl: "https://cdn/f2.jpg",
+    type: "TV",
+    status: "Finished Airing",
+    airedFrom: "2026-01-10T00:00:00+00:00",
+    genres: ["Adventure"],
+    episodes: 10,
+    durationMin: 24,
+    releaseDate: "2026-01-10",
+    releasePrecision: "day",
+    ...overrides,
+  });
+
+  // The Season literal addFoundSeason used to build by hand.
+  const legacySeason = (found: FoundSeason, id: string) => ({
+    id,
+    name: found.title,
+    malId: found.malId,
+    year: found.year,
+    malScore: found.malScore,
+    type: found.type,
+    episodes: found.episodes,
+    durationMin: found.durationMin,
+    imageUrl: found.imageUrl ?? null,
+  });
+
+  it.each([
+    ["completa", chainSeason()],
+    [
+      "sem capa nem dados",
+      chainSeason({
+        imageUrl: null,
+        year: null,
+        malScore: null,
+        type: null,
+        episodes: null,
+        durationMin: null,
+      }),
+    ],
+  ])("item disponível (%s) vira a mesma temporada que o literal antigo", (_label, c) => {
+    const merge = mergeChainIntoSeasons([], [c], new Set());
+    expect(merge.available).toHaveLength(1);
+    const found: FoundSeason = { ...merge.available[0], parentId: "p1", parentName: "Frieren" };
+    expect(seasonFromChain(found, () => "id-1")).toStrictEqual(legacySeason(found, "id-1"));
   });
 });
