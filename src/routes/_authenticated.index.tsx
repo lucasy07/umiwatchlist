@@ -258,6 +258,7 @@ function Index() {
   const [tierWaveRun, setTierWaveRun] = useState(0);
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const revealScrollCleanupRef = useRef<(() => void) | null>(null);
   const pendingEditApplyRef = useRef<(() => void) | null>(null);
   const [watchedFlashId, setWatchedFlashId] = useState<string | null>(null);
   const watchedFlashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -540,13 +541,43 @@ function Index() {
   function revealAnime(id: string) {
     const el = document.getElementById(`anime-${id}`);
     if (!el) return;
+    revealScrollCleanupRef.current?.();
+    const flash = () => {
+      setHighlightId(id);
+      if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
+      highlightTimeoutRef.current = setTimeout(() => {
+        setHighlightId((current) => (current === id ? null : current));
+      }, 1200);
+    };
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    el.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
-    setHighlightId(id);
-    if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
-    highlightTimeoutRef.current = setTimeout(() => {
-      setHighlightId((current) => (current === id ? null : current));
-    }, 1200);
+    if (reduced) {
+      el.scrollIntoView({ block: "center", behavior: "auto" });
+      flash();
+      return;
+    }
+    // O flash espera a rolagem suave terminar: scrollend, ou 150ms sem scroll (card já
+    // visível, ou navegador sem scrollend), com teto de 1,5s.
+    let idleTimeout = setTimeout(finish, 150);
+    const capTimeout = setTimeout(finish, 1500);
+    const onScroll = () => {
+      clearTimeout(idleTimeout);
+      idleTimeout = setTimeout(finish, 150);
+    };
+    function cleanup() {
+      clearTimeout(idleTimeout);
+      clearTimeout(capTimeout);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("scrollend", finish);
+      revealScrollCleanupRef.current = null;
+    }
+    function finish() {
+      cleanup();
+      flash();
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("scrollend", finish);
+    revealScrollCleanupRef.current = cleanup;
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
   }
 
   function addedAnimeToastOptions(created: Anime): {
@@ -583,6 +614,7 @@ function Index() {
   useEffect(() => {
     return () => {
       if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
+      revealScrollCleanupRef.current?.();
       if (watchedFlashTimeoutRef.current) clearTimeout(watchedFlashTimeoutRef.current);
       if (tierWaveTimeoutRef.current) clearTimeout(tierWaveTimeoutRef.current);
     };
