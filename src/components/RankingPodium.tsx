@@ -16,7 +16,8 @@ import {
 import { anilistBannerQueryOptions, bannerMalId } from "@/lib/anime-banner";
 import { type Anime, mediaMAL, rankColor } from "@/lib/anime-storage";
 
-type RankingPodiumProps = {
+/** Estado e ações comuns aos cards do ranking MAL (pódio, grid e lista). */
+export type RankingCardProps = {
   entries: Anime[];
   highlightId: string | null;
   watchedFlashId: string | null;
@@ -45,7 +46,7 @@ export function RankingPodium({
   onCheckSeasons,
   onToggleWatched,
   onRemove,
-}: RankingPodiumProps) {
+}: RankingCardProps) {
   const headingId = useId();
   return (
     <section aria-labelledby={headingId} className="mb-6">
