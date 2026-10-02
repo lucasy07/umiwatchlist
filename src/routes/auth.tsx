@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { AlertCircle, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,8 +46,26 @@ function translateAuthError(raw: string): string {
   return "Não foi possível concluir. Tente novamente em instantes.";
 }
 
+/**
+ * Arte de fundo: aparece com fade só depois de carregada, para não fazer fade de uma
+ * imagem ainda vazia. Com SSR o load pode vir antes da hidratação; daí o `complete`.
+ */
+function useImageLoaded() {
+  const ref = useRef<HTMLImageElement>(null);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    const img = ref.current;
+    if (img?.complete && img.naturalWidth > 0) setLoaded(true);
+  }, []);
+  return { ref, loaded, onLoad: () => setLoaded(true) };
+}
+
+const ART_FADE = "transition-opacity duration-emphasis ease-out-soft motion-reduce:transition-none";
+
 function AuthPage() {
   const navigate = useNavigate();
+  const mobileArt = useImageLoaded();
+  const desktopArt = useImageLoaded();
   const { session, loading } = useAuth();
   const [mode, setMode] = useState<"signin" | "signup" | "reset">("signin");
   const [username, setUsername] = useState("");
@@ -244,38 +262,44 @@ function AuthPage() {
       `}</style>
 
       {/* Mobile background art strip */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[52%] select-none lg:hidden">
+      <div
+        className={`pointer-events-none absolute inset-x-0 top-0 z-0 h-[52%] select-none lg:hidden ${ART_FADE} ${
+          mobileArt.loaded ? "opacity-100" : "opacity-0"
+        }`}
+      >
         <img
+          ref={mobileArt.ref}
+          onLoad={mobileArt.onLoad}
           src={loginArt.url}
           alt=""
           aria-hidden="true"
           draggable={false}
           loading="eager"
           fetchPriority="high"
-          className="h-full w-full object-cover object-[26%_50%] opacity-[0.46] animate-in fade-in duration-1000 motion-reduce:animate-none"
+          className="h-full w-full object-cover object-[26%_50%] opacity-[0.46]"
         />
-        <div
-          className="absolute inset-0 animate-in fade-in duration-1000 motion-reduce:animate-none"
-          style={{ background: "var(--gradient-scrim-mobile)" }}
-        />
+        <div className="absolute inset-0" style={{ background: "var(--gradient-scrim-mobile)" }} />
       </div>
 
       {/* Desktop art layer — fixed, non-scrollable */}
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-0 hidden w-[55%] lg:block">
+      <div
+        className={`pointer-events-none absolute inset-y-0 right-0 z-0 hidden w-[55%] lg:block ${ART_FADE} ${
+          desktopArt.loaded ? "opacity-100" : "opacity-0"
+        }`}
+      >
         <img
+          ref={desktopArt.ref}
+          onLoad={desktopArt.onLoad}
           src={loginArtDesktop.url}
           alt=""
           aria-hidden="true"
           draggable={false}
           loading="eager"
           fetchPriority="high"
-          className="h-full w-full select-none object-cover object-[25%_25%] animate-in fade-in duration-1000 motion-reduce:animate-none"
+          className="h-full w-full select-none object-cover object-[25%_25%]"
         />
         {/* Scrim overlay */}
-        <div
-          className="absolute inset-0 animate-in fade-in duration-1000 motion-reduce:animate-none"
-          style={{ background: "var(--gradient-scrim)" }}
-        />
+        <div className="absolute inset-0" style={{ background: "var(--gradient-scrim)" }} />
         {/* Dither layer */}
         <div
           className="absolute inset-0 pointer-events-none opacity-[0.038] mix-blend-overlay"
