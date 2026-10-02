@@ -404,6 +404,33 @@
   animation: tier-badge-pop var(--motion-duration-fast) var(--motion-spring);
 }
 
+/* Barras das estatísticas crescem a partir da base ao abrir; atraso por linha via
+   animation-delay inline. */
+@keyframes stat-bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.stat-bar-grow {
+  transform-origin: left center;
+  animation: stat-bar-grow 700ms var(--motion-out-soft) both;
+}
+
+/* Anel de nível: desenha a partir de vazio (--ring-length) até o offset final do elemento. */
+@keyframes stat-ring-draw {
+  from {
+    stroke-dashoffset: var(--ring-length);
+  }
+}
+
+.stat-ring-draw {
+  animation: stat-ring-draw 1100ms var(--motion-out-soft) 150ms both;
+}
+
 .tier-wave-row-a::after,
 .tier-wave-row-b::after {
   position: absolute;
@@ -550,6 +577,11 @@
   }
 
   .tier-badge-pop {
+    animation: none;
+  }
+
+  .stat-bar-grow,
+  .stat-ring-draw {
     animation: none;
   }
 
