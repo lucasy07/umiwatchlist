@@ -20,6 +20,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { type Season, isExcludedFromAverage } from "@/lib/anime-storage";
+import { prefersReducedMotion } from "@/lib/tier-drop-animation";
 
 type Props = {
   seasons: Season[];
@@ -30,6 +31,7 @@ type Props = {
 function SortableRow({ season, onDelete }: { season: Season; onDelete: (id: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: season.id,
+    transition: prefersReducedMotion() ? null : undefined,
   });
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
