@@ -747,14 +747,29 @@ export function upcomingEntries(anime: Anime): UpcomingEntry[] {
   return entries;
 }
 
-/** Earliest dated premiere of an anime; an undated one only when none has a date; else null. */
+const PRECISION_ORDER: Record<ReleasePrecision, number> = { day: 0, month: 1, year: 2 };
+
+/**
+ * Release order of two premieres: by the day, or the end of the month/year a vague date points
+ * to; on a tie the more precise first. Undated ones go last. 0 keeps the current order.
+ */
+function compareUpcomingEntries(a: UpcomingEntry, b: UpcomingEntry): number {
+  if (a.releaseDate === null || b.releaseDate === null) {
+    return (a.releaseDate === null ? 1 : 0) - (b.releaseDate === null ? 1 : 0);
+  }
+  const endA = releasePeriodEnd(a.releaseDate, a.releasePrecision);
+  const endB = releasePeriodEnd(b.releaseDate, b.releasePrecision);
+  if (endA !== endB) return endA < endB ? -1 : 1;
+  return (
+    PRECISION_ORDER[a.releasePrecision ?? "day"] - PRECISION_ORDER[b.releasePrecision ?? "day"]
+  );
+}
+
+/** Next premiere of an anime in release order; an undated one only when none has a date; else null. */
 export function nextRelease(anime: Anime): UpcomingEntry | null {
   let next: UpcomingEntry | null = null;
   for (const entry of upcomingEntries(anime)) {
-    if (!next) next = entry;
-    else if (entry.releaseDate !== null) {
-      if (next.releaseDate === null || entry.releaseDate < next.releaseDate) next = entry;
-    }
+    if (!next || compareUpcomingEntries(entry, next) < 0) next = entry;
   }
   return next;
 }
@@ -802,8 +817,9 @@ export function releasePeriodEnd(
 }
 
 /**
- * Scheduled seasons for the "Em breve" strip, soonest first. Day precision stays up to
- * UPCOMING_RECENT_DAYS after release; month/year precision stays until the period ends.
+ * Scheduled seasons for the "Em breve" strip, in release order (`compareUpcomingEntries`).
+ * Day precision stays up to UPCOMING_RECENT_DAYS after release; month/year precision stays
+ * until the period ends.
  * Undated ones always stay, after every dated one, by anime then season name.
  */
 export function selectUpcomingStrip(animes: Anime[]): UpcomingStripItem[] {
@@ -826,7 +842,7 @@ export function selectUpcomingStrip(animes: Anime[]): UpcomingStripItem[] {
       items.push({ anime, entry, days });
     }
   }
-  items.sort((a, b) => a.days! - b.days!);
+  items.sort((a, b) => compareUpcomingEntries(a.entry, b.entry));
   undated.sort(
     (a, b) =>
       a.anime.name.localeCompare(b.anime.name, "pt-BR") ||

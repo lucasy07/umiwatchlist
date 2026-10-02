@@ -1102,3 +1102,64 @@ describe("temporadas anunciadas sem data", () => {
     expect(formatReleaseRelative(null, null)).toBe("Anunciada");
   });
 });
+
+describe("ordem de lançamento com datas vagas", () => {
+  const today = () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 2, 12));
+  };
+  const at = (
+    id: string,
+    releaseDate: string | null,
+    releasePrecision: "day" | "month" | "year" | null,
+  ) => season({ id, name: id, unreleased: true, releaseDate, releasePrecision });
+  const strip = (seasons: Season[]) =>
+    selectUpcomingStrip(seasons.map((s) => anime({ id: s.id, name: s.id, seasons: [s] }))).map(
+      (i) => i.entry.seasonId,
+    );
+  const expected = ["15-mar", "mar", "01-out", "out", "2027", "15-jan-28"];
+  const sequence = [
+    at("15-mar", "2027-03-15", "day"),
+    at("mar", "2027-03-01", "month"),
+    at("01-out", "2027-10-01", "day"),
+    at("out", "2027-10-01", "month"),
+    at("2027", "2027-01-01", "year"),
+    at("15-jan-28", "2028-01-15", "day"),
+  ];
+
+  it("vaga vem depois das mais precisas do mesmo período, em qualquer ordem de entrada", () => {
+    today();
+    expect(strip(sequence)).toEqual(expected);
+    expect(strip([...sequence].reverse())).toEqual(expected);
+  });
+
+  it("empate dia × ano no último dia do ano: dia primeiro; legado conta como dia", () => {
+    today();
+    expect(strip([at("ano", "2027-01-01", "year"), at("dia", "2027-12-31", "day")])).toEqual([
+      "dia",
+      "ano",
+    ]);
+    expect(strip([at("ano", "2027-01-01", "year"), at("leg", "2027-12-31", null)])).toEqual([
+      "leg",
+      "ano",
+    ]);
+  });
+
+  it("sem data continua no fim", () => {
+    today();
+    expect(strip([at("sem", null, null), at("2027", "2027-01-01", "year")])).toEqual([
+      "2027",
+      "sem",
+    ]);
+  });
+
+  it("nextRelease escolhe 01 de out. de 2027 em vez de 2027 no mesmo anime", () => {
+    const seasons = [at("2027", "2027-01-01", "year"), at("01-out", "2027-10-01", "day")];
+    expect(nextRelease(anime({ seasons }))?.seasonId).toBe("01-out");
+    expect(nextRelease(anime({ seasons: [...seasons].reverse() }))?.seasonId).toBe("01-out");
+    expect(
+      nextRelease(anime({ seasons: [at("sem", null, null), at("2027", "2027-01-01", "year")] }))
+        ?.seasonId,
+    ).toBe("2027");
+  });
+});
