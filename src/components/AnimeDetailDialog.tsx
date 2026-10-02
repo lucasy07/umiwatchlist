@@ -21,7 +21,7 @@ import {
   mediaMAL,
   releasedSeasons,
 } from "@/lib/anime-storage";
-import { fetchAnilistBanner } from "@/lib/anilist-client";
+import { anilistBannerQueryOptions, bannerMalId } from "@/lib/anime-banner";
 import { formatScore, scoreColor } from "@/lib/score-format";
 
 type AnimeDetailDialogProps = {
@@ -81,14 +81,10 @@ export function AnimeDetailDialog({
   onSelectGenre,
 }: AnimeDetailDialogProps) {
   const image = anime ? (anime.cover ?? anime.imageUrl ?? null) : null;
-  const malId = anime ? (anime.malId ?? anime.seasons.find((s) => s.malId)?.malId ?? null) : null;
+  const malId = anime ? bannerMalId(anime) : null;
   const { data: banner = null } = useQuery({
-    queryKey: ["anilist-banner", malId],
-    queryFn: ({ signal }) => fetchAnilistBanner(malId as number, signal),
+    ...anilistBannerQueryOptions(malId),
     enabled: open && malId != null,
-    staleTime: Infinity,
-    gcTime: 24 * 60 * 60 * 1000,
-    retry: false,
   });
   const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
   const bannerLoaded = banner != null && loadedSrc === banner;
