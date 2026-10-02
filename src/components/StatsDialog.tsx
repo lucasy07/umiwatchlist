@@ -731,7 +731,7 @@ function BarRow({
           />
         </div>
       </div>
-      <span className={`shrink-0 text-right text-[11px] tabular-nums ${valueClass}`}>
+      <span className={`min-w-16 shrink-0 text-right text-[11px] tabular-nums ${valueClass}`}>
         {display}
       </span>
     </div>

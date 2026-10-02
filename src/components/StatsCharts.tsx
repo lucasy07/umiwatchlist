@@ -203,8 +203,8 @@ export function GenreRadar({ data }: { data: Array<{ name: string; count: number
   const reduced = useReducedMotion();
 
   return (
-    <ChartContainer config={GENRE_CHART_CONFIG} className="mx-auto aspect-square w-full max-w-72">
-      <RadarChart data={data} outerRadius="68%">
+    <ChartContainer config={GENRE_CHART_CONFIG} className="mx-auto aspect-[4/3] w-full max-w-md">
+      <RadarChart data={data} outerRadius="72%">
         <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
         <PolarGrid className="stroke-border" />
         <PolarAngleAxis
