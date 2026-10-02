@@ -687,7 +687,7 @@ function Index() {
     try {
       await setWatched(id, next);
       toast.success(next ? "Marcado como assistido" : "Movido para a lista", {
-        action: { label: "Desfazer", onClick: () => toggleWatched(id, !next) },
+        action: { label: "Desfazer", onClick: () => handleWatchedToggle(id, !next) },
       });
     } catch (err) {
       console.error(err);
@@ -696,7 +696,24 @@ function Index() {
     }
   }
 
+  function isInRanking(anime: Anime) {
+    const mode = displayMode.scoreMode;
+    return animeMatchesFilters(anime, mode) && (mode !== "gosto" || anime.watched);
+  }
+
   function handleWatchedToggle(id: string, next: boolean) {
+    // animesRef: o "Desfazer" do toast chama com o closure do render em que foi criado.
+    const anime = animesRef.current.find((a) => a.id === id);
+    const leavesOrEntersRanking =
+      anime != null && isInRanking(anime) !== isInRanking({ ...anime, watched: next });
+    // Card que sai ou entra no ranking (filtro de assistidos, Meu gosto): o flash não
+    // chegaria a aparecer, então ele sai/entra por view transition e os vizinhos deslizam.
+    // Com o detalhe aberto, não: os cards nomeados seriam pintados acima do diálogo.
+    if (leavesOrEntersRanking) {
+      if (detailOpen) void toggleWatched(id, next);
+      else withViewTransition(() => void toggleWatched(id, next));
+      return;
+    }
     if (next) {
       setWatchedFlashId(id);
       if (watchedFlashTimeoutRef.current) clearTimeout(watchedFlashTimeoutRef.current);
