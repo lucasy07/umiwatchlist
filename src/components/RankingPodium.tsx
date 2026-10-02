@@ -20,7 +20,6 @@ type RankingPodiumProps = {
   entries: Anime[];
   highlightId: string | null;
   watchedFlashId: string | null;
-  enableItemViewTransitions: boolean;
   animateRankingItems: boolean;
   checkDisabled: boolean;
   checkingId: string | null;
@@ -38,7 +37,6 @@ export function RankingPodium({
   entries,
   highlightId,
   watchedFlashId,
-  enableItemViewTransitions,
   animateRankingItems,
   checkDisabled,
   checkingId,
@@ -68,7 +66,6 @@ export function RankingPodium({
               watchedFlashId === anime.id ? "watched-card-flash" : ""
             }`}
             style={{
-              viewTransitionName: enableItemViewTransitions ? `anime-${anime.id}` : undefined,
               background: "var(--gradient-card)",
               boxShadow:
                 idx === 0 ? "var(--shadow-card), var(--shadow-glow)" : "var(--shadow-card)",
@@ -121,7 +118,6 @@ function PodiumCard({
 
   return (
     <li
-      id={`anime-${anime.id}`}
       className={`group relative overflow-hidden rounded-2xl border transition-[translate,border-color,box-shadow] motion-safe:hover:-translate-y-0.5 ${
         first
           ? "border-primary/60 hover:border-primary"

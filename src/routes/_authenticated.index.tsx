@@ -260,6 +260,7 @@ function Index() {
   const [tierWaveRun, setTierWaveRun] = useState(0);
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingEditApplyRef = useRef<(() => void) | null>(null);
   const [watchedFlashId, setWatchedFlashId] = useState<string | null>(null);
   const watchedFlashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tierWaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1446,13 +1447,18 @@ function Index() {
     const cleaned = editSeasons.map((s) => ({ ...s, name: s.name.trim() }));
     const original = animes.find((a) => a.id === editAnimeId);
     const nextTier = editTier;
-    setAnimes((prev) =>
-      prev.map((a) =>
-        a.id === editAnimeId
-          ? { ...a, name, cover: editCover, seasons: cleaned, tier: nextTier }
-          : a,
-      ),
-    );
+    // Aplicado só quando o diálogo desmonta (onCloseAutoFocus): na view transition os cards
+    // nomeados são pintados acima do snapshot da página e apareceriam por cima do diálogo.
+    pendingEditApplyRef.current = () =>
+      withViewTransition(() =>
+        setAnimes((prev) =>
+          prev.map((a) =>
+            a.id === editAnimeId
+              ? { ...a, name, cover: editCover, seasons: cleaned, tier: nextTier }
+              : a,
+          ),
+        ),
+      );
     setEditDialogOpen(false);
     try {
       const tasks: Promise<void>[] = [];
@@ -1468,7 +1474,10 @@ function Index() {
     } catch (err) {
       console.error(err);
       toast.error("Falha ao salvar alterações");
-      if (original) {
+      if (pendingEditApplyRef.current) {
+        // Ainda não aplicado: basta descartar.
+        pendingEditApplyRef.current = null;
+      } else if (original) {
         setAnimes((prev) => prev.map((a) => (a.id === editAnimeId ? original : a)));
       }
     }
@@ -2096,7 +2105,6 @@ function Index() {
                   entries={podiumSplit.podium}
                   highlightId={highlightId}
                   watchedFlashId={watchedFlashId}
-                  enableItemViewTransitions={enableItemViewTransitions}
                   animateRankingItems={animateRankingItems}
                   checkDisabled={checking || checkingId !== null || updatingMalScores}
                   checkingId={checkingId}
@@ -2347,7 +2355,6 @@ function Index() {
                   entries={podiumSplit.podium}
                   highlightId={highlightId}
                   watchedFlashId={watchedFlashId}
-                  enableItemViewTransitions={enableItemViewTransitions}
                   animateRankingItems={animateRankingItems}
                   checkDisabled={checking || checkingId !== null || updatingMalScores}
                   checkingId={checkingId}
@@ -2715,7 +2722,14 @@ function Index() {
 
       {/* Edit Anime Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto border-border bg-card">
+        <DialogContent
+          className="max-h-[90vh] overflow-y-auto border-border bg-card"
+          onCloseAutoFocus={() => {
+            const apply = pendingEditApplyRef.current;
+            pendingEditApplyRef.current = null;
+            apply?.();
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Editar anime</DialogTitle>
             <DialogDescription>Atualize o nome, a capa e as temporadas.</DialogDescription>
