@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { startTransition, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { createPortal } from "react-dom";
 import { useBootProgress } from "@/boot/BootProgress";
 
 import { BrandLockup } from "@/components/BrandLockup";
@@ -51,7 +50,6 @@ import {
   type CreateAnimeInput,
   type Season,
   type Tier,
-  TIER_VALUE,
   compareTierlistOrder,
   fetchAnimes,
   createAnime,
@@ -103,23 +101,13 @@ import { AddAnimeDialog } from "@/components/AddAnimeDialog";
 import { AddSeasonDialog } from "@/components/AddSeasonDialog";
 import { SortableSeasonList } from "@/components/SortableSeasonList";
 import { SeasonThumb } from "@/components/SeasonThumb";
-import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { arrayMove } from "@dnd-kit/sortable";
 import {
-  DndContext,
-  DragOverlay,
-  KeyboardSensor,
-  PointerSensor,
-  TouchSensor,
-  pointerWithin,
-  rectIntersection,
-  type CollisionDetection,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  type DragStartEvent,
-} from "@dnd-kit/core";
-import { CoverArt, DraggableCover, TierDropRow } from "@/components/TierlistDnD";
-import { tierDropAnimation } from "@/lib/tier-drop-animation";
+  TIER_ROWS,
+  TIER_WAVE_DURATION_MS,
+  TIER_WAVE_STAGGER_MS,
+  TierlistBoard,
+} from "@/components/TierlistBoard";
 
 import { buildChainDetailed, type ChainSeason } from "@/lib/jikan-chain";
 import { buildAnilistChain, fetchAnilistSeasonsByMalId } from "@/lib/anilist-client";
@@ -144,21 +132,6 @@ import {
   type UpdatedSeason,
 } from "@/lib/scan-types";
 import { formatScore, scoreColor } from "@/lib/score-format";
-
-const TIER_ROWS = (Object.keys(TIER_VALUE) as Tier[]).sort((a, b) => TIER_VALUE[b] - TIER_VALUE[a]);
-// Espelham o stagger e a duração definidos nas animações de src/styles.css.
-const TIER_WAVE_STAGGER_MS = 70;
-const TIER_WAVE_DURATION_MS = 620;
-
-const ROW_IDS = new Set<string>([...TIER_ROWS, "none"]);
-
-/** Multi-container: ponteiro manda; cards têm prioridade sobre fileiras. */
-const tierCollisionDetection: CollisionDetection = (args) => {
-  const pointer = pointerWithin(args);
-  const collisions = pointer.length > 0 ? pointer : rectIntersection(args);
-  const cards = collisions.filter((c) => !ROW_IDS.has(String(c.id)));
-  return cards.length > 0 ? cards : collisions;
-};
 
 export const Route = createFileRoute("/_authenticated/")({
   codeSplitGroupings: [["component"]],
@@ -225,14 +198,6 @@ function Index() {
   const [watchedFlashId, setWatchedFlashId] = useState<string | null>(null);
   const watchedFlashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tierWaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const tierSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
-  const draggingAnime = draggingAnimeId
-    ? (animes.find((a) => a.id === draggingAnimeId) ?? null)
-    : null;
 
   const [showFilters, setShowFilters] = useState(false);
 
@@ -1922,149 +1887,16 @@ function Index() {
                 description="Marque animes como assistidos para vê-los na sua tierlist."
               />
             ) : (
-              <div className="space-y-2">
-                <DndContext
-                  sensors={tierSensors}
-                  collisionDetection={tierCollisionDetection}
-                  onDragStart={(e: DragStartEvent) => setDraggingAnimeId(String(e.active.id))}
-                  onDragCancel={() => setDraggingAnimeId(null)}
-                  onDragEnd={(e: DragEndEvent) => {
-                    setDraggingAnimeId(null);
-                    const overId = e.over?.id;
-                    if (!overId) return;
-                    const activeId = String(e.active.id);
-                    if (String(overId) === activeId) return;
-                    const anime = animes.find((a) => a.id === activeId);
-                    if (!anime) return;
-                    const overAnime = animes.find((a) => a.id === String(overId));
-                    if (overAnime) {
-                      void moveAnimeInTierlist(anime.id, overAnime.tier, overAnime.id);
-                      return;
-                    }
-                    const target = overId === "none" ? null : (String(overId) as Tier);
-                    void moveAnimeInTierlist(anime.id, target, null);
-                  }}
-                >
-                  <div className="overflow-hidden rounded-xl border border-border/60">
-                    {TIER_ROWS.map((t, rowIndex) => {
-                      const items = displayedRanked.filter((a) => a.tier === t && a.watched);
-                      const hasItems = items.length > 0;
-                      const waveVariant =
-                        tierWaveRun > 0 ? (tierWaveRun % 2 === 0 ? "b" : "a") : null;
-                      return (
-                        <TierDropRow
-                          key={t}
-                          id={t}
-                          items={items.map((a) => a.id)}
-                          className={`border-b border-border/60 last:border-b-0 ${hasItems ? "min-h-32" : "min-h-20"} ${waveVariant ? `tier-wave-row-${waveVariant}` : ""}`}
-                          style={
-                            {
-                              "--wave-tint": `var(--tier-${t.toLowerCase()})`,
-                              "--wave-delay": `${rowIndex * TIER_WAVE_STAGGER_MS}ms`,
-                            } as CSSProperties
-                          }
-                          label={
-                            <div className="relative flex w-12 sm:w-16 shrink-0 items-center justify-center bg-card">
-                              <div className={`absolute inset-y-0 left-0 w-1.5 ${tierBg(t)}`} />
-                              <span
-                                className={`font-display text-2xl font-bold sm:text-3xl ${tierColor(t)}`}
-                              >
-                                {t}
-                              </span>
-                            </div>
-                          }
-                        >
-                          {items.map((anime, idx) => (
-                            <li
-                              key={anime.id}
-                              className={`list-none ${waveVariant ? `tier-wave-card-${waveVariant}` : ""}`}
-                              style={
-                                {
-                                  viewTransitionName: enableItemViewTransitions
-                                    ? `anime-${anime.id}`
-                                    : undefined,
-                                  "--wave-delay": `${rowIndex * TIER_WAVE_STAGGER_MS}ms`,
-                                } as CSSProperties
-                              }
-                            >
-                              <DraggableCover
-                                id={`anime-${anime.id}`}
-                                anime={anime}
-                                idx={idx}
-                                onOpen={openDetail}
-                                highlighted={highlightId === anime.id}
-                              />
-                            </li>
-                          ))}
-                        </TierDropRow>
-                      );
-                    })}
-                    {(draggingAnimeId !== null ||
-                      displayedRanked.some((a) => a.tier === null && a.watched)) && (
-                      <TierDropRow
-                        id="none"
-                        items={displayedRanked
-                          .filter((a) => a.tier === null && a.watched)
-                          .map((a) => a.id)}
-                        className={`min-h-32 border-t border-border/60 ${tierWaveRun > 0 ? `tier-wave-row-${tierWaveRun % 2 === 0 ? "b" : "a"}` : ""}`}
-                        style={
-                          {
-                            "--wave-tint": "var(--muted-foreground)",
-                            "--wave-delay": `${TIER_ROWS.length * TIER_WAVE_STAGGER_MS}ms`,
-                          } as CSSProperties
-                        }
-                        label={
-                          <div className="relative flex w-12 sm:w-16 shrink-0 items-center justify-center bg-card">
-                            <div className="absolute inset-y-0 left-0 w-1.5 bg-muted-foreground/30" />
-                            <span className="font-display text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                              Sem tier
-                            </span>
-                          </div>
-                        }
-                      >
-                        {displayedRanked
-                          .filter((a) => a.tier === null && a.watched)
-                          .map((anime, idx) => (
-                            <li
-                              key={anime.id}
-                              className={`list-none ${tierWaveRun > 0 ? `tier-wave-card-${tierWaveRun % 2 === 0 ? "b" : "a"}` : ""}`}
-                              style={
-                                {
-                                  viewTransitionName: enableItemViewTransitions
-                                    ? `anime-${anime.id}`
-                                    : undefined,
-                                  "--wave-delay": `${TIER_ROWS.length * TIER_WAVE_STAGGER_MS}ms`,
-                                } as CSSProperties
-                              }
-                            >
-                              <DraggableCover
-                                id={`anime-${anime.id}`}
-                                anime={anime}
-                                idx={idx}
-                                onOpen={openDetail}
-                                highlighted={highlightId === anime.id}
-                              />
-                            </li>
-                          ))}
-                      </TierDropRow>
-                    )}
-                  </div>
-                  {(() => {
-                    const overlay = (
-                      <DragOverlay dropAnimation={tierDropAnimation()}>
-                        {draggingAnime ? (
-                          <div className="group w-20 scale-105 rounded-lg ring-2 ring-primary/50">
-                            <CoverArt anime={draggingAnime} />
-                          </div>
-                        ) : null}
-                      </DragOverlay>
-                    );
-                    return typeof document !== "undefined"
-                      ? createPortal(overlay, document.body)
-                      : overlay;
-                  })()}
-                </DndContext>
-              </div>
+              <TierlistBoard
+                entries={displayedRanked}
+                draggingAnimeId={draggingAnimeId}
+                onDraggingChange={setDraggingAnimeId}
+                tierWaveRun={tierWaveRun}
+                enableItemViewTransitions={enableItemViewTransitions}
+                highlightId={highlightId}
+                onOpen={openDetail}
+                onMove={moveAnimeInTierlist}
+              />
             )
           ) : displayMode.viewMode === "grid" ? (
             <>
