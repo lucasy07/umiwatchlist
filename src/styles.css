@@ -487,6 +487,28 @@
   }
 }
 
+/* Ranking grande demais para nomear cada card: o bloco inteiro só faz crossfade,
+   sem a escala dos cards, que num snapshot alto desloca o que está na tela. */
+::view-transition-old(ranking) {
+  animation-name: view-transition-old-ranking;
+}
+
+::view-transition-new(ranking) {
+  animation-name: view-transition-new-ranking;
+}
+
+@keyframes view-transition-old-ranking {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes view-transition-new-ranking {
+  from {
+    opacity: 0;
+  }
+}
+
 /* O snapshot root (html) não tem nome próprio e é pego pelos seletores
    universais acima. Zerar a duração aqui, mantendo o bloco depois dos (*)
    para vencer por ordem, evita que header, barra de filtros e FAB façam

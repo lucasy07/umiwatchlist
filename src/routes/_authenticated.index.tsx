@@ -247,9 +247,6 @@ function Index() {
     scoreMode: "mal" | "gosto";
     viewMode: "list" | "grid";
   }>({ scoreMode: "mal", viewMode: "list" });
-  const [rankingTransition, setRankingTransition] = useState<"entering" | "exiting">("entering");
-  const rankingTransitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const latestModeRef = useRef({ scoreMode, viewMode });
   const didInitialAnimate = useRef(false);
   const [tierFilter, setTierFilter] = useState<Set<Tier>>(() => new Set());
   const [typeFilter, setTypeFilter] = useState<Set<string>>(() => new Set());
@@ -395,48 +392,26 @@ function Index() {
     localStorage.setItem("anime-ranker:v1:scoreMode", scoreMode);
   }, [scoreMode, hydrated]);
 
+  // displayMode segue o toggle, menos durante um drag na tierlist: aí espera o drop.
+  // Também cobre o modo salvo carregado na hidratação.
   useEffect(() => {
-    const nextMode = { scoreMode, viewMode };
-    latestModeRef.current = nextMode;
-    if (rankingTransitionTimeoutRef.current) {
-      clearTimeout(rankingTransitionTimeoutRef.current);
-      rankingTransitionTimeoutRef.current = null;
-    }
+    if (draggingAnimeId !== null) return;
+    setDisplayMode((prev) =>
+      prev.scoreMode === scoreMode && prev.viewMode === viewMode ? prev : { scoreMode, viewMode },
+    );
+  }, [scoreMode, viewMode, draggingAnimeId]);
 
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!hydrated || reducedMotion) {
-      setDisplayMode(nextMode);
-      setRankingTransition("entering");
-      return;
-    }
-
-    if (
-      displayMode.scoreMode === nextMode.scoreMode &&
-      displayMode.viewMode === nextMode.viewMode
-    ) {
-      setRankingTransition("entering");
-      return;
-    }
-
-    if (draggingAnimeId !== null) {
-      setRankingTransition("entering");
-      return;
-    }
-
-    setRankingTransition("exiting");
-    rankingTransitionTimeoutRef.current = setTimeout(() => {
-      setDisplayMode(latestModeRef.current);
-      setRankingTransition("entering");
-      rankingTransitionTimeoutRef.current = null;
-    }, 120);
-
-    return () => {
-      if (rankingTransitionTimeoutRef.current) {
-        clearTimeout(rankingTransitionTimeoutRef.current);
-        rankingTransitionTimeoutRef.current = null;
-      }
+  // Trocar MAL/Meu gosto ou lista/grade: os cards têm o mesmo viewTransitionName em todas
+  // as visualizações, então cada um desliza e muda de tamanho até a nova posição.
+  function changeRankingMode(patch: { scoreMode?: "mal" | "gosto"; viewMode?: "list" | "grid" }) {
+    const apply = () => {
+      if (patch.scoreMode) setScoreMode(patch.scoreMode);
+      if (patch.viewMode) setViewMode(patch.viewMode);
+      if (draggingAnimeId === null) setDisplayMode((prev) => ({ ...prev, ...patch }));
     };
-  }, [scoreMode, viewMode, hydrated, draggingAnimeId, displayMode.scoreMode, displayMode.viewMode]);
+    if (!hydrated || draggingAnimeId !== null) apply();
+    else withViewTransition(apply);
+  }
 
   useEffect(() => {
     if (!hydrated) return;
@@ -1493,7 +1468,7 @@ function Index() {
         },
       ]}
       value={viewMode}
-      onChange={setViewMode}
+      onChange={(next) => changeRankingMode({ viewMode: next })}
     />
   );
 
@@ -1542,7 +1517,7 @@ function Index() {
                 { value: "gosto", ariaLabel: "Ordenar pelo meu gosto", content: "Meu gosto" },
               ]}
               value={scoreMode}
-              onChange={setScoreMode}
+              onChange={(next) => changeRankingMode({ scoreMode: next })}
             />
             <button
               type="button"
@@ -1902,11 +1877,10 @@ function Index() {
         )}
 
         <div
-          className={`motion-reduce:opacity-100 motion-reduce:transition-none ${
-            rankingTransition === "exiting"
-              ? "opacity-0 transition-opacity duration-[120ms] ease-in"
-              : "opacity-100 transition-opacity duration-[180ms] ease-out"
-          }`}
+          style={{
+            // Acima do limite os cards não têm nome; o ranking inteiro faz crossfade.
+            viewTransitionName: enableItemViewTransitions ? undefined : "ranking",
+          }}
         >
           {hydrated && displayMode.scoreMode === "mal" && (
             <UpcomingStrip animes={animes} onOpen={openDetail} />
