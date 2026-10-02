@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { createPortal } from "react-dom";
 import { useBootProgress } from "@/boot/BootProgress";
 
+import { Collapse } from "@/components/Collapse";
 import { BrandLockup } from "@/components/BrandLockup";
 import { useTilt } from "@/hooks/use-tilt";
 import {
@@ -2519,8 +2520,8 @@ function Index() {
                         </Button>
                       </div>
 
-                      {isOpen && (
-                        <div className="border-t border-border bg-background/30 px-4 py-3 animate-in fade-in-0 slide-in-from-top-1 fill-mode-both duration-200 ease-out-soft motion-reduce:animate-none sm:px-5">
+                      <Collapse open={isOpen}>
+                        <div className="border-t border-border bg-background/30 px-4 py-3 sm:px-5">
                           <div className="mb-3 flex flex-wrap items-center gap-2">
                             <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
                               Meu tier
@@ -2627,7 +2628,7 @@ function Index() {
                             </Button>
                           </div>
                         </div>
-                      )}
+                      </Collapse>
                     </li>
                   );
                 })}
