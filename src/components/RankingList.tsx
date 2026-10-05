@@ -151,7 +151,7 @@ export function RankingList({
                   <img
                     src={anime.cover ?? anime.imageUrl ?? undefined}
                     alt={anime.name}
-                    className="h-full w-full object-cover transition-transform duration-emphasis motion-safe:group-hover:scale-105"
+                    className="h-full w-full object-cover transition-transform duration-slow ease-out-soft motion-safe:group-hover:scale-105"
                     loading="lazy"
                   />
                 ) : (
