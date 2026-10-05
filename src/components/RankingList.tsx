@@ -346,6 +346,8 @@ export function RankingList({
                     size="sm"
                     onClick={() => onRemove(anime)}
                     className="text-muted-foreground hover:text-destructive"
+                    aria-label="Remover anime"
+                    title="Remover anime"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

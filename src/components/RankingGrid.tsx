@@ -80,9 +80,9 @@ export function RankingGrid({
               <button
                 type="button"
                 onClick={() => onOpen(anime.id)}
-                aria-label={anime.name}
+                aria-label={`#${idx + 1}, ${anime.name}, nota MAL ${malAvg != null ? primaryValue : "sem nota"}`}
                 title={anime.name}
-                className="block w-full cursor-pointer appearance-none border-0 bg-transparent p-0 text-left"
+                className="block w-full cursor-pointer appearance-none border-0 bg-transparent p-0 text-left outline-none"
               >
                 <div className="relative aspect-[2/3] w-full overflow-hidden bg-card-elevated">
                   {anime.cover || anime.imageUrl ? (
@@ -286,7 +286,8 @@ function TiltCardInner({
     <div
       onMouseMove={tilt.onMouseMove}
       onMouseLeave={tilt.onMouseLeave}
-      className={`group relative overflow-hidden rounded-2xl border ${
+      // O card corta o outline do botão (overflow-hidden): o foco aparece no próprio card.
+      className={`group relative overflow-hidden rounded-2xl border has-[>button:focus-visible]:outline-2 has-[>button:focus-visible]:outline-offset-2 has-[>button:focus-visible]:outline-ring ${
         tierS ? "border-tier-s/70 ring-1 ring-inset ring-tier-s/40" : "border-border/60"
       } transition-[border-color,box-shadow] duration-base hover:border-primary/50 hover:shadow-[var(--shadow-elegant)]`}
       style={{
