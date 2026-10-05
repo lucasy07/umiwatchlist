@@ -19,6 +19,7 @@ import { tierBg, tierColor } from "@/components/TierPicker";
 import { CoverArt, DraggableCover, TierDropRow } from "@/components/TierlistDnD";
 import { type Anime, type Tier, TIER_VALUE } from "@/lib/anime-storage";
 import { tierDropAnimation } from "@/lib/tier-drop-animation";
+import { TIERLIST_DND_INSTRUCTIONS, tierlistAnnouncements } from "@/lib/tierlist-announcements";
 
 export const TIER_ROWS = (Object.keys(TIER_VALUE) as Tier[]).sort(
   (a, b) => TIER_VALUE[b] - TIER_VALUE[a],
@@ -77,6 +78,10 @@ export function TierlistBoard({
       <DndContext
         sensors={sensors}
         collisionDetection={tierCollisionDetection}
+        accessibility={{
+          announcements: tierlistAnnouncements(entries),
+          screenReaderInstructions: { draggable: TIERLIST_DND_INSTRUCTIONS },
+        }}
         onDragStart={(e: DragStartEvent) => onDraggingChange(String(e.active.id))}
         onDragCancel={() => onDraggingChange(null)}
         onDragEnd={(e: DragEndEvent) => {
@@ -105,6 +110,7 @@ export function TierlistBoard({
               <TierDropRow
                 key={t}
                 id={t}
+                listLabel={`Tier ${t}`}
                 items={items.map((a) => a.id)}
                 className={`border-b border-border/60 last:border-b-0 ${hasItems ? "min-h-32" : "min-h-20"} ${waveVariant ? `tier-wave-row-${waveVariant}` : ""}`}
                 style={
@@ -150,6 +156,7 @@ export function TierlistBoard({
           {(draggingAnimeId !== null || entries.some((a) => a.tier === null && a.watched)) && (
             <TierDropRow
               id="none"
+              listLabel="Sem tier"
               items={entries.filter((a) => a.tier === null && a.watched).map((a) => a.id)}
               className={`min-h-32 border-t border-border/60 ${tierWaveRun > 0 ? `tier-wave-row-${tierWaveRun % 2 === 0 ? "b" : "a"}` : ""}`}
               style={

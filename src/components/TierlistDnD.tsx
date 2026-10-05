@@ -83,6 +83,7 @@ export function TierDropRow({
   children,
   className,
   label,
+  listLabel,
   style,
 }: {
   id: string;
@@ -90,6 +91,8 @@ export function TierDropRow({
   children: React.ReactNode;
   className?: string;
   label: React.ReactNode;
+  /** Nome acessível da fileira; a letra visual (`label`) fica oculta do leitor de tela. */
+  listLabel: string;
   style?: CSSProperties;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
@@ -101,12 +104,17 @@ export function TierDropRow({
         isOver ? "bg-primary/5 ring-1 ring-inset ring-primary/40" : ""
       } ${className ?? ""}`}
     >
-      <div className="relative z-10 flex">{label}</div>
-      <div className="relative z-10 flex flex-1 flex-wrap content-center items-center gap-2.5 p-3">
+      <div aria-hidden="true" className="relative z-10 flex">
+        {label}
+      </div>
+      <ul
+        aria-label={listLabel}
+        className="relative z-10 flex flex-1 flex-wrap content-center items-center gap-2.5 p-3"
+      >
         <SortableContext items={items} strategy={rectSortingStrategy}>
           {children}
         </SortableContext>
-      </div>
+      </ul>
     </div>
   );
 }
