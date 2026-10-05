@@ -33,6 +33,7 @@ export function DraggableCover({
   id,
   highlighted,
   viewTransitionName,
+  animateIn,
 }: {
   anime: Anime;
   idx: number;
@@ -40,6 +41,8 @@ export function DraggableCover({
   id?: string;
   highlighted?: boolean;
   viewTransitionName?: string;
+  /** Entrada só na primeira carga: soltar em outra fileira remonta a capa. */
+  animateIn: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: anime.id,
@@ -55,7 +58,7 @@ export function DraggableCover({
       onClick={() => onOpen(anime.id)}
       aria-label={anime.name}
       title={anime.name}
-      className={`group relative focus-ring w-20 animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-slow motion-reduce:animate-none appearance-none border-0 bg-transparent p-0 text-left touch-none ${
+      className={`group relative focus-ring w-20 ${animateIn ? "animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-slow motion-reduce:animate-none" : ""} appearance-none border-0 bg-transparent p-0 text-left touch-none ${
         isDragging ? "opacity-40" : ""
       } ${
         highlighted
@@ -63,7 +66,7 @@ export function DraggableCover({
           : ""
       }`}
       style={{
-        animationDelay: `${Math.min(idx, 12) * 30}ms`,
+        ...(animateIn ? { animationDelay: `${Math.min(idx, 12) * 30}ms` } : {}),
         transform: CSS.Transform.toString(transform),
         transition,
         viewTransitionName: isDragging ? undefined : viewTransitionName,

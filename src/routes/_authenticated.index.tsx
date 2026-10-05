@@ -1892,6 +1892,7 @@ function Index() {
                 draggingAnimeId={draggingAnimeId}
                 onDraggingChange={setDraggingAnimeId}
                 tierWaveRun={tierWaveRun}
+                animateItems={animateRankingItems}
                 enableItemViewTransitions={enableItemViewTransitions}
                 highlightId={highlightId}
                 onOpen={openDetail}

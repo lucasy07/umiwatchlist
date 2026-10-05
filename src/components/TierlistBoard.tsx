@@ -46,6 +46,8 @@ type TierlistBoardProps = {
   onDraggingChange: (animeId: string | null) => void;
   /** Contador da onda de entrada; 0 sem onda, a paridade alterna as animações. */
   tierWaveRun: number;
+  /** Entrada das capas só na primeira carga da página (mesma regra do ranking MAL). */
+  animateItems: boolean;
   enableItemViewTransitions: boolean;
   highlightId: string | null;
   onOpen: (animeId: string) => void;
@@ -59,6 +61,7 @@ export function TierlistBoard({
   draggingAnimeId,
   onDraggingChange,
   tierWaveRun,
+  animateItems,
   enableItemViewTransitions,
   highlightId,
   onOpen,
@@ -147,6 +150,7 @@ export function TierlistBoard({
                       idx={idx}
                       onOpen={onOpen}
                       highlighted={highlightId === anime.id}
+                      animateIn={animateItems}
                     />
                   </li>
                 ))}
@@ -195,6 +199,7 @@ export function TierlistBoard({
                       idx={idx}
                       onOpen={onOpen}
                       highlighted={highlightId === anime.id}
+                      animateIn={animateItems}
                     />
                   </li>
                 ))}
