@@ -107,6 +107,7 @@ export function RankingList({
           <li
             key={anime.id}
             id={`anime-${anime.id}`}
+            data-vt-card
             className={`group relative overflow-hidden rounded-2xl border border-border/60 transition-[translate,border-color,box-shadow] ${animateRankingItems ? "animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-slow motion-reduce:animate-none" : ""} motion-safe:hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[var(--shadow-elegant)] ${
               highlightId === anime.id ? "card-flash" : ""
             } ${watchedFlashId === anime.id ? "watched-card-flash" : ""}`}

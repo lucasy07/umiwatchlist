@@ -71,6 +71,7 @@ export function RankingGrid({
           <li
             key={anime.id}
             id={`anime-${anime.id}`}
+            data-vt-card
             className={`${animateRankingItems ? "animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-slow motion-reduce:animate-none" : ""} [transform-style:preserve-3d] ${
               highlightId === anime.id ? "card-flash" : ""
             } ${watchedFlashId === anime.id ? "watched-card-flash" : ""}`}
