@@ -134,6 +134,7 @@ export function TierlistBoard({
                 {items.map((anime, idx) => (
                   <li
                     key={anime.id}
+                    data-vt-card
                     className={`list-none ${waveVariant ? `tier-wave-card-${waveVariant}` : ""}`}
                     style={
                       {
@@ -183,6 +184,7 @@ export function TierlistBoard({
                 .map((anime, idx) => (
                   <li
                     key={anime.id}
+                    data-vt-card
                     className={`list-none ${tierWaveRun > 0 ? `tier-wave-card-${tierWaveRun % 2 === 0 ? "b" : "a"}` : ""}`}
                     style={
                       {

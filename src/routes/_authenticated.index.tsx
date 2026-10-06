@@ -330,16 +330,27 @@ function Index() {
     );
   }, [scoreMode, viewMode, draggingAnimeId]);
 
-  // Trocar MAL/Meu gosto ou lista/grade: os cards têm o mesmo viewTransitionName em todas
-  // as visualizações, então cada um desliza e muda de tamanho até a nova posição.
+  // Trocar lista/grade: os cards têm o mesmo viewTransitionName nas duas visualizações,
+  // então cada um desliza e muda de tamanho até a nova posição. Trocar MAL/Meu gosto
+  // quase não compartilha cards (MAL mostra não assistidos por padrão, Meu gosto só
+  // assistidos), então o ranking desliza inteiro na direção do toggle (styles.css).
   function changeRankingMode(patch: { scoreMode?: "mal" | "gosto"; viewMode?: "list" | "grid" }) {
     const apply = () => {
       if (patch.scoreMode) setScoreMode(patch.scoreMode);
       if (patch.viewMode) setViewMode(patch.viewMode);
       if (draggingAnimeId === null) setDisplayMode((prev) => ({ ...prev, ...patch }));
     };
-    if (!hydrated || draggingAnimeId !== null) apply();
-    else withViewTransition(apply);
+    if (!hydrated || draggingAnimeId !== null) {
+      apply();
+      return;
+    }
+    if (patch.scoreMode && patch.scoreMode !== scoreMode) {
+      const rootClass = `vt-mode-to-${patch.scoreMode}`;
+      document.documentElement.classList.remove("vt-mode-to-mal", "vt-mode-to-gosto");
+      withViewTransition(apply, { rootClass });
+      return;
+    }
+    withViewTransition(apply);
   }
 
   useEffect(() => {
@@ -1553,7 +1564,7 @@ function Index() {
 
       {/* List */}
       <main className="mx-auto max-w-7xl px-4 pb-32 pt-6 sm:px-6">
-        <div className="mb-4 flex items-center justify-between gap-3">
+        <div data-vt-toolbar className="mb-4 flex items-center justify-between gap-3">
           {scoreMode === "gosto" && (
             <Button
               variant="ghost"
@@ -1841,6 +1852,7 @@ function Index() {
         )}
 
         <div
+          data-vt-ranking
           style={{
             // Acima do limite os cards não têm nome; o ranking inteiro faz crossfade.
             viewTransitionName: enableItemViewTransitions ? undefined : "ranking",

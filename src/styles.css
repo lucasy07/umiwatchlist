@@ -560,6 +560,67 @@
   animation-duration: 0s;
 }
 
+/* Troca MAL/Meu gosto: quase nenhum card existe nos dois modos, então em vez de
+   cada card fazer fade solto (com pódio e linhas da tierlist pulando no root) o
+   ranking inteiro desliza na direção da pílula do toggle. */
+:root:is(.vt-mode-to-gosto, .vt-mode-to-mal) [data-vt-card] {
+  view-transition-name: none !important;
+}
+
+:root:is(.vt-mode-to-gosto, .vt-mode-to-mal) [data-vt-ranking] {
+  view-transition-name: ranking-mode !important;
+}
+
+:root:is(.vt-mode-to-gosto, .vt-mode-to-mal) [data-vt-toolbar] {
+  view-transition-name: ranking-toolbar;
+}
+
+:root.vt-mode-to-gosto {
+  --vt-mode-dir: 1;
+}
+
+:root.vt-mode-to-mal {
+  --vt-mode-dir: -1;
+}
+
+/* O grupo vai direto para o tamanho novo: interpolar a altura esticaria os
+   snapshots, que têm alturas bem diferentes entre lista e tierlist. */
+::view-transition-group(ranking-mode),
+::view-transition-group(ranking-toolbar) {
+  animation-duration: 0s;
+}
+
+::view-transition-old(ranking-mode) {
+  animation: var(--motion-duration-base) ease-in both view-transition-old-mode;
+}
+
+::view-transition-new(ranking-mode) {
+  animation: var(--motion-duration-slow) var(--motion-out-soft) 60ms both view-transition-new-mode;
+}
+
+::view-transition-old(ranking-toolbar) {
+  animation: var(--motion-duration-base) ease-in both view-transition-old-ranking;
+}
+
+::view-transition-new(ranking-toolbar) {
+  animation: var(--motion-duration-slow) var(--motion-out-soft) 60ms both
+    view-transition-new-ranking;
+}
+
+@keyframes view-transition-old-mode {
+  to {
+    opacity: 0;
+    translate: calc(var(--vt-mode-dir, 1) * -24px) 0;
+  }
+}
+
+@keyframes view-transition-new-mode {
+  from {
+    opacity: 0;
+    translate: calc(var(--vt-mode-dir, 1) * 24px) 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*),
   ::view-transition-old(*),
