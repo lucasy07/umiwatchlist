@@ -30,6 +30,7 @@ import {
   isUnreleased,
 } from "@/lib/anime-storage";
 import { prefersReducedMotion } from "@/lib/tier-drop-animation";
+import { SEASON_DND_INSTRUCTIONS, seasonAnnouncements } from "@/lib/season-announcements";
 
 type Props = {
   seasons: Season[];
@@ -65,7 +66,7 @@ function SortableSeasonItem({
           type="button"
           {...attributes}
           {...listeners}
-          className="flex h-11 w-11 shrink-0 cursor-grab sm:h-9 sm:w-6 items-center justify-center text-muted-foreground hover:text-foreground active:cursor-grabbing touch-none"
+          className="focus-ring flex h-11 w-11 shrink-0 cursor-grab sm:h-9 sm:w-6 items-center justify-center text-muted-foreground hover:text-foreground active:cursor-grabbing touch-none"
           aria-label="Arrastar para reordenar"
         >
           <GripVertical className="h-4 w-4" />
@@ -132,7 +133,15 @@ export function SortableSeasonList({ seasons, setSeasons }: Props) {
   }
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+      accessibility={{
+        announcements: seasonAnnouncements(seasons),
+        screenReaderInstructions: { draggable: SEASON_DND_INSTRUCTIONS },
+      }}
+    >
       <SortableContext items={seasons.map((s) => s.id)} strategy={verticalListSortingStrategy}>
         <ul className="grid gap-2">
           {seasons.map((s) => (
