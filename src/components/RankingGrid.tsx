@@ -162,8 +162,9 @@ export function RankingGrid({
                 </div>
               </button>
 
+              {/* Ações em linha (32px) só com mouse; no toque fica o menu compacto de 44px. */}
               <div className="@container">
-                <div className="flex gap-1 p-2 @min-[224px]:hidden">
+                <div className="flex gap-1 p-2 @min-[224px]:pointer-fine:hidden">
                   <Button
                     variant="secondary"
                     size="sm"
@@ -216,7 +217,7 @@ export function RankingGrid({
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                <div className="hidden gap-1 p-2 @min-[224px]:flex">
+                <div className="hidden gap-1 p-2 @min-[224px]:pointer-fine:flex">
                   <Button
                     variant="secondary"
                     size="sm"
