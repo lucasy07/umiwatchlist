@@ -116,6 +116,7 @@ import { runMigrations } from "@/lib/migrations";
 import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SegmentedToggle } from "@/components/SegmentedToggle";
+import { captureScrollAnchor } from "@/lib/scroll-anchor";
 import { withViewTransition } from "@/lib/view-transition";
 import {
   classifyChain,
@@ -171,6 +172,7 @@ function Index() {
   const [search, setSearch] = useState("");
   const [hasSearchText, setHasSearchText] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
   function clearSearch() {
     if (searchInputRef.current) searchInputRef.current.value = "";
     setHasSearchText(false);
@@ -338,8 +340,17 @@ function Index() {
       if (patch.viewMode) setViewMode(patch.viewMode);
       if (draggingAnimeId === null) setDisplayMode((prev) => ({ ...prev, ...patch }));
     };
-    if (!hydrated || draggingAnimeId !== null) apply();
-    else withViewTransition(apply);
+    if (!hydrated || draggingAnimeId !== null) {
+      apply();
+      return;
+    }
+    // Lista e grade têm alturas bem diferentes: sem âncora, o mesmo scrollY cai em outro
+    // trecho do ranking e os cards visíveis saem voando. Mantém o primeiro card no lugar.
+    const restoreScroll =
+      patch.viewMode && patch.viewMode !== viewMode
+        ? captureScrollAnchor(headerRef.current?.getBoundingClientRect().bottom ?? 0)
+        : null;
+    withViewTransition(apply, { afterUpdate: restoreScroll ?? undefined });
   }
 
   useEffect(() => {
@@ -1443,7 +1454,10 @@ function Index() {
       />
 
       {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-border/60 bg-background/70 backdrop-blur-xl">
+      <header
+        ref={headerRef}
+        className="sticky top-0 z-30 border-b border-border/60 bg-background/70 backdrop-blur-xl"
+      >
         <div className="mx-auto flex h-[72px] sm:h-[88px] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
           <h1 className="min-w-0 shrink-0">
             <span className="sr-only">Umi Watchlist</span>
