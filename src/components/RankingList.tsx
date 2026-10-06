@@ -203,7 +203,7 @@ export function RankingList({
                         aria-label="Filtrar por Award Winning"
                         title="Award Winning (MAL)"
                         onClick={onSelectAwardFilter}
-                        className="focus-ring inline-flex items-center gap-1 rounded-md bg-award px-1.5 py-0.5 text-[10px] font-medium text-award-foreground transition-colors hover:brightness-110"
+                        className="focus-ring relative inline-flex items-center gap-1 rounded-md bg-award px-1.5 py-0.5 text-[10px] font-medium text-award-foreground transition-colors after:absolute after:inset-x-0 after:-inset-y-3.5 hover:brightness-110 sm:after:hidden"
                       >
                         <Award className="h-3 w-3" />
                         Award Winning
@@ -295,7 +295,7 @@ export function RankingList({
                           ? onDeleteSeason(anime.id, next.seasonId)
                           : onClearUpcoming(anime.id)
                       }
-                      className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                      className="-my-2 h-11 w-11 shrink-0 text-muted-foreground hover:text-destructive sm:my-0 sm:h-7 sm:w-7"
                       aria-label="Remover lançamento"
                     >
                       <X className="h-3.5 w-3.5" />

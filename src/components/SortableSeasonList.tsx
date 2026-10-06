@@ -65,7 +65,7 @@ function SortableSeasonItem({
           type="button"
           {...attributes}
           {...listeners}
-          className="flex h-9 w-6 shrink-0 cursor-grab items-center justify-center text-muted-foreground hover:text-foreground active:cursor-grabbing touch-none"
+          className="flex h-11 w-11 shrink-0 cursor-grab sm:h-9 sm:w-6 items-center justify-center text-muted-foreground hover:text-foreground active:cursor-grabbing touch-none"
           aria-label="Arrastar para reordenar"
         >
           <GripVertical className="h-4 w-4" />
@@ -82,13 +82,13 @@ function SortableSeasonItem({
           variant="ghost"
           size="icon"
           onClick={remove}
-          className="h-9 w-9 text-muted-foreground hover:text-destructive"
+          className="h-11 w-11 text-muted-foreground hover:text-destructive sm:h-9 sm:w-9"
           aria-label="Remover temporada"
         >
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>
-      <div className="flex items-center gap-2 pl-8">
+      <div className="flex items-center gap-2 pl-13 sm:pl-8">
         <Switch
           id={`edit-season-${season.id}-average`}
           checked={!isExcludedFromAverage(season)}
