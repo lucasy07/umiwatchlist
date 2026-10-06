@@ -116,7 +116,6 @@ import { runMigrations } from "@/lib/migrations";
 import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SegmentedToggle } from "@/components/SegmentedToggle";
-import { captureScrollAnchor } from "@/lib/scroll-anchor";
 import { withViewTransition } from "@/lib/view-transition";
 import {
   classifyChain,
@@ -172,8 +171,6 @@ function Index() {
   const [search, setSearch] = useState("");
   const [hasSearchText, setHasSearchText] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const headerRef = useRef<HTMLElement>(null);
-  const rankingRef = useRef<HTMLDivElement>(null);
   function clearSearch() {
     if (searchInputRef.current) searchInputRef.current.value = "";
     setHasSearchText(false);
@@ -341,29 +338,8 @@ function Index() {
       if (patch.viewMode) setViewMode(patch.viewMode);
       if (draggingAnimeId === null) setDisplayMode((prev) => ({ ...prev, ...patch }));
     };
-    if (!hydrated || draggingAnimeId !== null) {
-      apply();
-      return;
-    }
-    // Cada visualização tem altura e ordem diferentes: sem âncora, o mesmo scrollY cai em
-    // outro trecho do ranking e os cards visíveis saem voando. Mantém o primeiro card no lugar.
-    const changesLayout =
-      (patch.viewMode && patch.viewMode !== viewMode) ||
-      (patch.scoreMode && patch.scoreMode !== scoreMode);
-    const headerBottom = headerRef.current?.getBoundingClientRect().bottom ?? 0;
-    const restoreScroll = changesLayout ? captureScrollAnchor(headerBottom) : null;
-    // Sem card em comum (o filtro padrão mostra não assistidos no MAL e o Meu gosto só os
-    // assistidos), o offset antigo não quer dizer nada: volta para o começo do ranking.
-    const afterUpdate = restoreScroll
-      ? () => {
-          if (restoreScroll()) return;
-          const rankingTop = rankingRef.current?.getBoundingClientRect().top;
-          if (rankingTop != null && rankingTop < headerBottom) {
-            window.scrollBy({ top: rankingTop - headerBottom, behavior: "instant" });
-          }
-        }
-      : undefined;
-    withViewTransition(apply, { afterUpdate });
+    if (!hydrated || draggingAnimeId !== null) apply();
+    else withViewTransition(apply);
   }
 
   useEffect(() => {
@@ -1467,10 +1443,7 @@ function Index() {
       />
 
       {/* Header */}
-      <header
-        ref={headerRef}
-        className="sticky top-0 z-30 border-b border-border/60 bg-background/70 backdrop-blur-xl"
-      >
+      <header className="sticky top-0 z-30 border-b border-border/60 bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex h-[72px] sm:h-[88px] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
           <h1 className="min-w-0 shrink-0">
             <span className="sr-only">Umi Watchlist</span>
@@ -1868,7 +1841,6 @@ function Index() {
         )}
 
         <div
-          ref={rankingRef}
           style={{
             // Acima do limite os cards não têm nome; o ranking inteiro faz crossfade.
             viewTransitionName: enableItemViewTransitions ? undefined : "ranking",
