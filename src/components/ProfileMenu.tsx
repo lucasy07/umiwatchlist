@@ -168,7 +168,9 @@ export function ProfileMenu({ onOpenStats, onOpenImport }: ProfileMenuProps) {
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            aria-label="Menu do perfil"
+            aria-label={
+              profile?.username ? `Menu do perfil de ${profile.username}` : "Menu do perfil"
+            }
             className="focus-ring inline-flex h-11 items-center gap-2 rounded-full ring-1 ring-border/60 transition-colors hover:ring-primary/50 sm:h-9"
           >
             <Avatar className="h-11 w-11 shrink-0 sm:h-9 sm:w-9">

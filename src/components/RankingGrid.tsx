@@ -56,7 +56,10 @@ export function RankingGrid({
   onRemove,
 }: RankingGridProps) {
   return (
-    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
+    <ol
+      start={offset + 1}
+      className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5"
+    >
       {entries.map((anime, restIdx) => {
         const idx = restIdx + offset;
         const malAvg = mediaMAL(anime.seasons);
@@ -149,9 +152,9 @@ export function RankingGrid({
                   <div
                     className={`absolute inset-x-0 bottom-0 p-3 ${isAwardWinning(anime) ? "pr-11" : ""}`}
                   >
-                    <h3 className="font-display line-clamp-2 text-sm font-semibold leading-tight tracking-tight">
+                    <span className="font-display line-clamp-2 text-sm font-semibold leading-tight tracking-tight">
                       {anime.name}
-                    </h3>
+                    </span>
                     <p className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
                       {seasonCount} {seasonCount === 1 ? "temporada" : "temporadas"}
                     </p>
@@ -270,7 +273,7 @@ export function RankingGrid({
           </li>
         );
       })}
-    </ul>
+    </ol>
   );
 }
 

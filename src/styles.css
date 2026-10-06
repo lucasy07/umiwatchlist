@@ -230,6 +230,7 @@
   }
 
   html {
+    color-scheme: dark;
     scrollbar-width: thin;
     scrollbar-color: var(--border-strong) transparent;
     scrollbar-gutter: stable;
