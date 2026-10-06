@@ -173,6 +173,7 @@ function Index() {
   const [hasSearchText, setHasSearchText] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const headerRef = useRef<HTMLElement>(null);
+  const rankingRef = useRef<HTMLDivElement>(null);
   function clearSearch() {
     if (searchInputRef.current) searchInputRef.current.value = "";
     setHasSearchText(false);
@@ -344,13 +345,25 @@ function Index() {
       apply();
       return;
     }
-    // Lista e grade têm alturas bem diferentes: sem âncora, o mesmo scrollY cai em outro
-    // trecho do ranking e os cards visíveis saem voando. Mantém o primeiro card no lugar.
-    const restoreScroll =
-      patch.viewMode && patch.viewMode !== viewMode
-        ? captureScrollAnchor(headerRef.current?.getBoundingClientRect().bottom ?? 0)
-        : null;
-    withViewTransition(apply, { afterUpdate: restoreScroll ?? undefined });
+    // Cada visualização tem altura e ordem diferentes: sem âncora, o mesmo scrollY cai em
+    // outro trecho do ranking e os cards visíveis saem voando. Mantém o primeiro card no lugar.
+    const changesLayout =
+      (patch.viewMode && patch.viewMode !== viewMode) ||
+      (patch.scoreMode && patch.scoreMode !== scoreMode);
+    const headerBottom = headerRef.current?.getBoundingClientRect().bottom ?? 0;
+    const restoreScroll = changesLayout ? captureScrollAnchor(headerBottom) : null;
+    // Sem card em comum (o filtro padrão mostra não assistidos no MAL e o Meu gosto só os
+    // assistidos), o offset antigo não quer dizer nada: volta para o começo do ranking.
+    const afterUpdate = restoreScroll
+      ? () => {
+          if (restoreScroll()) return;
+          const rankingTop = rankingRef.current?.getBoundingClientRect().top;
+          if (rankingTop != null && rankingTop < headerBottom) {
+            window.scrollBy({ top: rankingTop - headerBottom, behavior: "instant" });
+          }
+        }
+      : undefined;
+    withViewTransition(apply, { afterUpdate });
   }
 
   useEffect(() => {
@@ -1855,6 +1868,7 @@ function Index() {
         )}
 
         <div
+          ref={rankingRef}
           style={{
             // Acima do limite os cards não têm nome; o ranking inteiro faz crossfade.
             viewTransitionName: enableItemViewTransitions ? undefined : "ranking",
