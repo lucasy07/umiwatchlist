@@ -289,7 +289,7 @@ export function ProfileMenu({ onOpenStats, onOpenImport }: ProfileMenuProps) {
               Cancelar
             </Button>
             <Button onClick={() => void save()} disabled={saving || uploading}>
-              {saving ? "Salvando..." : "Salvar"}
+              {saving ? "Salvando…" : "Salvar"}
             </Button>
           </DialogFooter>
         </DialogContent>

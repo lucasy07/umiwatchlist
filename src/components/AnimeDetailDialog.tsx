@@ -333,7 +333,7 @@ export function AnimeDetailDialog({
         ) : (
           <div role="status" aria-busy="true" className="grid gap-2 px-5 pb-8 pt-14 sm:px-8">
             <DialogTitle className="font-display text-xl font-bold">Detalhes do anime</DialogTitle>
-            <p className="text-sm text-muted-foreground">Carregando...</p>
+            <p className="text-sm text-muted-foreground">Carregando…</p>
           </div>
         )}
       </DialogContent>

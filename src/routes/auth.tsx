@@ -532,7 +532,7 @@ function AuthPage() {
                 className="mt-2 h-12 min-h-12 w-full bg-primary uppercase tracking-[0.15em] focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {submitting
-                  ? "Aguarde..."
+                  ? "Aguarde…"
                   : mode === "signin"
                     ? "Login"
                     : mode === "signup"
