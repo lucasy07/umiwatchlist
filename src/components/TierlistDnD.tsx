@@ -33,6 +33,7 @@ export function DraggableCover({
   id,
   highlighted,
   viewTransitionName,
+  animateIn,
 }: {
   anime: Anime;
   idx: number;
@@ -40,6 +41,8 @@ export function DraggableCover({
   id?: string;
   highlighted?: boolean;
   viewTransitionName?: string;
+  /** Entrada só na primeira carga: soltar em outra fileira remonta a capa. */
+  animateIn: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: anime.id,
@@ -55,15 +58,11 @@ export function DraggableCover({
       onClick={() => onOpen(anime.id)}
       aria-label={anime.name}
       title={anime.name}
-      className={`group relative focus-ring w-20 animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-slow motion-reduce:animate-none appearance-none border-0 bg-transparent p-0 text-left touch-none ${
+      className={`group relative focus-ring w-20 ${animateIn ? "animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-slow motion-reduce:animate-none" : ""} appearance-none border-0 bg-transparent p-0 text-left touch-none ${
         isDragging ? "opacity-40" : ""
-      } ${
-        highlighted
-          ? "ring-2 ring-primary shadow-[var(--shadow-elegant)] animate-pulse motion-reduce:animate-none"
-          : ""
-      }`}
+      } ${highlighted ? "card-flash ring-2 ring-primary shadow-[var(--shadow-elegant)]" : ""}`}
       style={{
-        animationDelay: `${Math.min(idx, 12) * 30}ms`,
+        ...(animateIn ? { animationDelay: `${Math.min(idx, 12) * 30}ms` } : {}),
         transform: CSS.Transform.toString(transform),
         transition,
         viewTransitionName: isDragging ? undefined : viewTransitionName,
@@ -83,6 +82,7 @@ export function TierDropRow({
   children,
   className,
   label,
+  listLabel,
   style,
 }: {
   id: string;
@@ -90,6 +90,8 @@ export function TierDropRow({
   children: React.ReactNode;
   className?: string;
   label: React.ReactNode;
+  /** Nome acessível da fileira; a letra visual (`label`) fica oculta do leitor de tela. */
+  listLabel: string;
   style?: CSSProperties;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
@@ -101,12 +103,17 @@ export function TierDropRow({
         isOver ? "bg-primary/5 ring-1 ring-inset ring-primary/40" : ""
       } ${className ?? ""}`}
     >
-      <div className="relative z-10 flex">{label}</div>
-      <div className="relative z-10 flex flex-1 flex-wrap content-center items-center gap-2.5 p-3">
+      <div aria-hidden="true" className="relative z-10 flex">
+        {label}
+      </div>
+      <ul
+        aria-label={listLabel}
+        className="relative z-10 flex flex-1 flex-wrap content-center items-center gap-2.5 p-3"
+      >
         <SortableContext items={items} strategy={rectSortingStrategy}>
           {children}
         </SortableContext>
-      </div>
+      </ul>
     </div>
   );
 }

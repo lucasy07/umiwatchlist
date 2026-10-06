@@ -56,7 +56,10 @@ export function RankingGrid({
   onRemove,
 }: RankingGridProps) {
   return (
-    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
+    <ol
+      start={offset + 1}
+      className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5"
+    >
       {entries.map((anime, restIdx) => {
         const idx = restIdx + offset;
         const malAvg = mediaMAL(anime.seasons);
@@ -80,16 +83,16 @@ export function RankingGrid({
               <button
                 type="button"
                 onClick={() => onOpen(anime.id)}
-                aria-label={anime.name}
+                aria-label={`#${idx + 1}, ${anime.name}, nota MAL ${malAvg != null ? primaryValue : "sem nota"}`}
                 title={anime.name}
-                className="block w-full cursor-pointer appearance-none border-0 bg-transparent p-0 text-left"
+                className="block w-full cursor-pointer appearance-none border-0 bg-transparent p-0 text-left outline-none"
               >
                 <div className="relative aspect-[2/3] w-full overflow-hidden bg-card-elevated">
                   {anime.cover || anime.imageUrl ? (
                     <img
                       src={anime.cover ?? anime.imageUrl ?? undefined}
                       alt={anime.name}
-                      className="h-full w-full object-cover transition-transform duration-emphasis motion-safe:group-hover:scale-105"
+                      className="h-full w-full object-cover transition-transform duration-slow ease-out-soft motion-safe:group-hover:scale-105"
                       loading="lazy"
                     />
                   ) : (
@@ -149,9 +152,9 @@ export function RankingGrid({
                   <div
                     className={`absolute inset-x-0 bottom-0 p-3 ${isAwardWinning(anime) ? "pr-11" : ""}`}
                   >
-                    <h3 className="font-display line-clamp-2 text-sm font-semibold leading-tight tracking-tight">
+                    <span className="font-display line-clamp-2 text-sm font-semibold leading-tight tracking-tight">
                       {anime.name}
-                    </h3>
+                    </span>
                     <p className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
                       {seasonCount} {seasonCount === 1 ? "temporada" : "temporadas"}
                     </p>
@@ -159,8 +162,9 @@ export function RankingGrid({
                 </div>
               </button>
 
+              {/* Ações em linha (32px) só com mouse; no toque fica o menu compacto de 44px. */}
               <div className="@container">
-                <div className="flex gap-1 p-2 @min-[224px]:hidden">
+                <div className="flex gap-1 p-2 @min-[224px]:pointer-fine:hidden">
                   <Button
                     variant="secondary"
                     size="sm"
@@ -213,7 +217,7 @@ export function RankingGrid({
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                <div className="hidden gap-1 p-2 @min-[224px]:flex">
+                <div className="hidden gap-1 p-2 @min-[224px]:pointer-fine:flex">
                   <Button
                     variant="secondary"
                     size="sm"
@@ -270,7 +274,7 @@ export function RankingGrid({
           </li>
         );
       })}
-    </ul>
+    </ol>
   );
 }
 
@@ -286,7 +290,8 @@ function TiltCardInner({
     <div
       onMouseMove={tilt.onMouseMove}
       onMouseLeave={tilt.onMouseLeave}
-      className={`group relative overflow-hidden rounded-2xl border ${
+      // O card corta o outline do botão (overflow-hidden): o foco aparece no próprio card.
+      className={`group relative overflow-hidden rounded-2xl border has-[>button:focus-visible]:outline-2 has-[>button:focus-visible]:outline-offset-2 has-[>button:focus-visible]:outline-ring ${
         tierS ? "border-tier-s/70 ring-1 ring-inset ring-tier-s/40" : "border-border/60"
       } transition-[border-color,box-shadow] duration-base hover:border-primary/50 hover:shadow-[var(--shadow-elegant)]`}
       style={{

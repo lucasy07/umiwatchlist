@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { moveActiveIndex } from "@/lib/combobox-nav";
 import { searchJikanAnime } from "@/lib/jikan-client";
 
 export type JikanPick = {
@@ -20,8 +21,14 @@ type JikanAnime = {
   images?: { jpg?: { small_image_url?: string; large_image_url?: string } };
 };
 
+/** Sem resposta nesse prazo, a busca cai para o AniList em vez de ficar em "Buscando…". */
+const JIKAN_SEARCH_TIMEOUT_MS = 8_000;
+
 async function searchJikan(q: string, signal: AbortSignal): Promise<JikanAnime[]> {
-  return searchJikanAnime(q, 5, { signal, priority: "interactive" });
+  return searchJikanAnime(q, 5, {
+    signal: AbortSignal.any([signal, AbortSignal.timeout(JIKAN_SEARCH_TIMEOUT_MS)]),
+    priority: "interactive",
+  });
 }
 
 type AniListMedia = {
@@ -102,6 +109,9 @@ export function JikanSearch({
 }: Props) {
   const [focused, setFocused] = useState(false);
   const [suppress, setSuppress] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const listboxId = useId();
+  const optionId = (index: number) => `${listboxId}-option-${index}`;
   const debounced = useDebounced(value.trim(), 500);
   const enabled = focused && !suppress && debounced.length >= 3;
 
@@ -116,6 +126,22 @@ export function JikanSearch({
   const results = enabled ? (data ?? []) : [];
   const showDropdown =
     focused && enabled && (results.length > 0 || isError || (isSuccess && results.length === 0));
+  const showOptions = showDropdown && !isError && results.length > 0;
+
+  // Lista nova (ou fechada): nenhuma opção fica ativa.
+  const resultsKey = showOptions ? results.map((r) => r.mal_id).join(",") : "";
+  const [prevResultsKey, setPrevResultsKey] = useState(resultsKey);
+  if (resultsKey !== prevResultsKey) {
+    setPrevResultsKey(resultsKey);
+    setActiveIndex(-1);
+  }
+
+  const activeId = showOptions && activeIndex >= 0 ? optionId(activeIndex) : undefined;
+
+  useEffect(() => {
+    if (!activeId) return;
+    document.getElementById(activeId)?.scrollIntoView({ block: "nearest" });
+  }, [activeId]);
 
   const errorMessage = isError
     ? error?.message === "429"
@@ -123,20 +149,65 @@ export function JikanSearch({
       : "Erro ao buscar no MyAnimeList. Tente novamente."
     : null;
 
+  const statusMessage = !enabled
+    ? ""
+    : isFetching
+      ? "Buscando…"
+      : isError
+        ? (errorMessage ?? "")
+        : isSuccess
+          ? results.length === 0
+            ? "Nenhum resultado"
+            : `${results.length} ${results.length === 1 ? "resultado" : "resultados"}`
+          : "";
+
+  const pick = (r: JikanAnime) => {
+    onPick({
+      malId: r.mal_id,
+      title: r.title,
+      imageUrl: r.images?.jpg?.large_image_url ?? null,
+      score: r.score ?? null,
+    });
+    onChange(r.title);
+    setSuppress(true);
+  };
+
   return (
     <div className="relative">
       <Input
         id={id}
         autoFocus={autoFocus}
         value={value}
+        role="combobox"
+        aria-expanded={showOptions}
+        aria-controls={listboxId}
+        aria-autocomplete="list"
+        aria-activedescendant={activeId}
         onChange={(e) => {
           setSuppress(false);
           onChange(e.target.value);
         }}
         onFocus={() => setFocused(true)}
-        onBlur={() => setTimeout(() => setFocused(false), 150)}
+        // Fecha no próximo tick: remover as opções durante o blur, com o foco ainda no
+        // body, faz o FocusScope do Radix devolver o foco ao dialog em vez do próximo campo.
+        onBlur={() => setTimeout(() => setFocused(false), 0)}
         onKeyDown={(e) => {
-          if (e.key === "Enter") onEnter?.();
+          if ((e.key === "ArrowDown" || e.key === "ArrowUp") && showOptions) {
+            e.preventDefault();
+            setActiveIndex((i) =>
+              moveActiveIndex(i, e.key === "ArrowDown" ? 1 : -1, results.length),
+            );
+            return;
+          }
+          if (e.key === "Enter") {
+            const active = showOptions ? results[activeIndex] : undefined;
+            if (active) {
+              e.preventDefault();
+              pick(active);
+              return;
+            }
+            onEnter?.();
+          }
           if (e.key === "Escape") setSuppress(true);
         }}
         placeholder={placeholder}
@@ -146,59 +217,65 @@ export function JikanSearch({
       {isFetching && enabled && (
         <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground motion-reduce:animate-none" />
       )}
-      {showDropdown && (
+      <p role="status" aria-live="polite" className="sr-only">
+        {statusMessage}
+      </p>
+      {showDropdown && !showOptions && (
         <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md">
           {isError ? (
             <p className="px-3 py-3 text-sm text-destructive">{errorMessage}</p>
-          ) : results.length === 0 ? (
-            <p className="px-3 py-3 text-sm text-muted-foreground">
-              Nenhum resultado para "{debounced}".
-            </p>
           ) : (
-            <ul className="max-h-72 overflow-y-auto py-1">
-              {results.map((r) => {
-                const year =
-                  r.year ?? (r.aired?.from ? new Date(r.aired.from).getFullYear() : null);
-                const thumb = r.images?.jpg?.small_image_url;
-                return (
-                  <li key={r.mal_id}>
-                    <button
-                      type="button"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => {
-                        onPick({
-                          malId: r.mal_id,
-                          title: r.title,
-                          imageUrl: r.images?.jpg?.large_image_url ?? null,
-                          score: r.score ?? null,
-                        });
-                        onChange(r.title);
-                        setSuppress(true);
-                      }}
-                      className="flex w-full items-center gap-3 px-2 py-2 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
-                    >
-                      {thumb ? (
-                        <img
-                          src={thumb}
-                          alt=""
-                          className="h-12 w-9 flex-shrink-0 rounded object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="h-12 w-9 flex-shrink-0 rounded bg-muted" />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium">{r.title}</p>
-                        {year && <p className="text-xs text-muted-foreground">{year}</p>}
-                      </div>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+            <p className="px-3 py-3 text-sm text-muted-foreground">
+              Nenhum resultado para “{debounced}”.
+            </p>
           )}
         </div>
       )}
+      <ul
+        id={listboxId}
+        role="listbox"
+        tabIndex={-1}
+        hidden={!showOptions}
+        className="absolute left-0 right-0 top-full z-50 mt-1 max-h-72 overflow-y-auto rounded-md border border-border bg-popover py-1 text-popover-foreground shadow-md"
+      >
+        {showOptions &&
+          results.map((r, index) => {
+            const year = r.year ?? (r.aired?.from ? new Date(r.aired.from).getFullYear() : null);
+            const thumb = r.images?.jpg?.small_image_url;
+            const active = index === activeIndex;
+            return (
+              <li
+                key={r.mal_id}
+                id={optionId(index)}
+                role="option"
+                aria-selected={active}
+                onMouseDown={(e) => e.preventDefault()}
+                onMouseEnter={() => setActiveIndex(index)}
+                onClick={() => pick(r)}
+                className={`flex w-full cursor-pointer items-center gap-3 px-2 py-2 text-left text-sm transition-colors ${
+                  active ? "bg-accent text-accent-foreground" : ""
+                }`}
+              >
+                {thumb ? (
+                  <img
+                    src={thumb}
+                    alt=""
+                    className="h-12 w-9 flex-shrink-0 rounded object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="h-12 w-9 flex-shrink-0 rounded bg-muted" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{r.title}</p>
+                  {year && (
+                    <p className={`text-xs ${active ? "" : "text-muted-foreground"}`}>{year}</p>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+      </ul>
     </div>
   );
 }

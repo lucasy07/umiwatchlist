@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { type Season, isExcludedFromAverage } from "@/lib/anime-storage";
 import { prefersReducedMotion } from "@/lib/tier-drop-animation";
+import { SEASON_DND_INSTRUCTIONS, seasonAnnouncements } from "@/lib/season-announcements";
 
 type Props = {
   seasons: Season[];
@@ -48,7 +49,7 @@ function SortableRow({ season, onDelete }: { season: Season; onDelete: (id: stri
         type="button"
         {...attributes}
         {...listeners}
-        className="flex h-7 w-5 shrink-0 cursor-grab items-center justify-center text-muted-foreground hover:text-foreground active:cursor-grabbing touch-none"
+        className="focus-ring -ml-3 flex h-11 w-11 shrink-0 cursor-grab sm:ml-0 sm:h-7 sm:w-5 items-center justify-center text-muted-foreground hover:text-foreground active:cursor-grabbing touch-none"
         aria-label="Arrastar para reordenar"
       >
         <GripVertical className="h-4 w-4" />
@@ -56,7 +57,7 @@ function SortableRow({ season, onDelete }: { season: Season; onDelete: (id: stri
       <SeasonThumb season={season} className="h-[42px] w-[30px] rounded" />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-1.5">
-          <p className="truncate text-sm">{season.name}</p>
+          <p className="max-w-full truncate text-sm">{season.name}</p>
           {season.type && (
             <Badge
               variant="outline"
@@ -104,7 +105,7 @@ function SortableRow({ season, onDelete }: { season: Season; onDelete: (id: stri
         variant="ghost"
         size="icon"
         onClick={() => onDelete(season.id)}
-        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+        className="-mr-3 h-11 w-11 text-muted-foreground hover:text-destructive sm:mr-0 sm:h-7 sm:w-7"
         aria-label="Remover temporada"
       >
         <Trash2 className="h-3.5 w-3.5" />
@@ -130,9 +131,17 @@ export function SortableCardSeasons({ seasons, onReorder, onDelete }: Props) {
   }
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+      accessibility={{
+        announcements: seasonAnnouncements(seasons),
+        screenReaderInstructions: { draggable: SEASON_DND_INSTRUCTIONS },
+      }}
+    >
       <SortableContext items={seasons.map((s) => s.id)} strategy={verticalListSortingStrategy}>
-        <ul className="grid gap-2">
+        <ul className="grid grid-cols-1 gap-2">
           {seasons.map((s) => (
             <SortableRow key={s.id} season={s} onDelete={onDelete} />
           ))}

@@ -103,7 +103,7 @@ export function AnimeDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-[calc(100vw-2rem)] gap-0 overflow-y-auto overflow-x-hidden border-border bg-card p-0 sm:max-w-3xl [&>button:last-child]:z-20 [&>button:last-child]:rounded-full [&>button:last-child]:bg-background/55 [&>button:last-child]:p-3.5 [&>button:last-child]:opacity-100 sm:[&>button:last-child]:p-2">
+      <DialogContent className="max-h-[90dvh] max-w-[calc(100vw-2rem)] gap-0 overflow-y-auto overflow-x-hidden border-border bg-card p-0 sm:max-w-3xl [&>button:last-child]:z-20 [&>button:last-child]:rounded-full [&>button:last-child]:bg-background/55 [&>button:last-child]:p-3.5 [&>button:last-child]:opacity-100 sm:[&>button:last-child]:p-2">
         {anime ? (
           <>
             <section className="relative overflow-hidden px-5 pb-5 pt-14 sm:h-[340px] sm:p-0">
@@ -268,9 +268,9 @@ export function AnimeDetailDialog({
             </section>
 
             <div className="grid gap-2 px-5 pb-8 pt-6 sm:px-8">
-              <h4 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
                 Temporadas
-              </h4>
+              </h3>
               {anime.seasons.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhuma temporada</p>
               ) : (
@@ -333,7 +333,7 @@ export function AnimeDetailDialog({
         ) : (
           <div role="status" aria-busy="true" className="grid gap-2 px-5 pb-8 pt-14 sm:px-8">
             <DialogTitle className="font-display text-xl font-bold">Detalhes do anime</DialogTitle>
-            <p className="text-sm text-muted-foreground">Carregando...</p>
+            <p className="text-sm text-muted-foreground">Carregando…</p>
           </div>
         )}
       </DialogContent>

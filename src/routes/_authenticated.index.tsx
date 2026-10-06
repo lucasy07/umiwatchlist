@@ -1528,7 +1528,7 @@ function Index() {
                   searchInputRef.current?.focus();
                 }
               }}
-              placeholder="Buscar na sua coleção..."
+              placeholder="Buscar na sua coleção…"
               className={`h-11 border-border/60 bg-card pl-10 text-base placeholder:text-muted-foreground/70 focus-visible:ring-primary/40 ${
                 hasSearchText ? "pr-12" : "pr-3"
               }`}
@@ -1727,7 +1727,7 @@ function Index() {
                     </PopoverTrigger>
                     <PopoverContent className="w-64 p-0" align="start">
                       <Command>
-                        <CommandInput placeholder="Buscar gênero..." />
+                        <CommandInput placeholder="Buscar gênero…" />
                         <CommandList>
                           <CommandEmpty>Nenhum gênero encontrado.</CommandEmpty>
                           <CommandGroup>
@@ -1892,6 +1892,7 @@ function Index() {
                 draggingAnimeId={draggingAnimeId}
                 onDraggingChange={setDraggingAnimeId}
                 tierWaveRun={tierWaveRun}
+                animateItems={animateRankingItems}
                 enableItemViewTransitions={enableItemViewTransitions}
                 highlightId={highlightId}
                 onOpen={openDetail}

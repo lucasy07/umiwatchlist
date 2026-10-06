@@ -230,6 +230,7 @@
   }
 
   html {
+    color-scheme: dark;
     scrollbar-width: thin;
     scrollbar-color: var(--border-strong) transparent;
     scrollbar-gutter: stable;
@@ -360,12 +361,13 @@
   }
 }
 
+/* A faixa de brilho desliza via transform (GPU), não background-position. */
 @keyframes skeleton-shimmer {
   from {
-    background-position: -200% 0;
+    transform: translateX(-100%);
   }
   to {
-    background-position: 200% 0;
+    transform: translateX(100%);
   }
 }
 
@@ -387,7 +389,7 @@
     color-mix(in oklab, var(--primary) 12%, transparent),
     transparent
   );
-  background-size: 200% 100%;
+  transform: translateX(-100%);
   animation: skeleton-shimmer 1.6s linear infinite;
   animation-delay: var(--skeleton-delay, 0ms);
 }

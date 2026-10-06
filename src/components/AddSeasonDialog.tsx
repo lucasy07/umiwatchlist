@@ -160,10 +160,10 @@ export function AddSeasonDialog({
                 setSeasonSearch(pick.title);
                 void pickSeasonEntry(pick);
               }}
-              placeholder="Buscar temporada, OVA, filme..."
+              placeholder="Buscar temporada, OVA, filme…"
             />
             {seasonDetailsLoading && (
-              <p className="text-xs text-muted-foreground">Buscando detalhes...</p>
+              <p className="text-xs text-muted-foreground">Buscando detalhes…</p>
             )}
           </div>
         </div>

@@ -213,7 +213,7 @@ export function MalImportDialog({
                 onClick={() => fileRef.current?.click()}
               >
                 <FileUp className="h-4 w-4" />
-                {parsing ? "Lendo arquivo..." : "Escolher arquivo"}
+                {parsing ? "Lendo arquivo…" : "Escolher arquivo"}
               </Button>
               <input
                 ref={fileRef}
@@ -265,7 +265,7 @@ export function MalImportDialog({
             <div className="grid gap-2">
               <div className="flex items-center justify-between gap-4 text-sm">
                 <span className="truncate text-muted-foreground">
-                  {progress.currentName || "Preparando importação..."}
+                  {progress.currentName || "Preparando importação…"}
                 </span>
                 <span role="status" className="shrink-0 tabular-nums">
                   {progress.done} de {progress.total}
@@ -330,7 +330,7 @@ function SummaryList({ label, names }: { label: string; names: string[] }) {
           {label} <span className="text-muted-foreground">({names.length})</span>
         </span>
         <ChevronDown
-          className="h-4 w-4 transition-transform group-open:rotate-180"
+          className="h-4 w-4 transition-transform duration-base ease-out-soft group-open:rotate-180 motion-reduce:transition-none"
           aria-hidden="true"
         />
       </summary>
