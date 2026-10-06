@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import {
   Award,
   CalendarClock,
@@ -147,7 +148,15 @@ export function RankingList({
               >
                 #{idx + 1}
               </div>
-              <div className="relative self-stretch min-h-[120px] w-20 shrink-0 overflow-hidden rounded-lg bg-card-elevated ring-1 ring-border/40 sm:min-h-[168px] sm:w-28">
+              <div
+                data-vt-cover
+                className="relative self-stretch min-h-[120px] w-20 shrink-0 overflow-hidden rounded-lg bg-card-elevated ring-1 ring-border/40 sm:min-h-[168px] sm:w-28"
+                style={
+                  enableItemViewTransitions
+                    ? ({ "--vt-cover": `anime-cover-${anime.id}` } as CSSProperties)
+                    : undefined
+                }
+              >
                 {anime.cover || anime.imageUrl ? (
                   <img
                     src={anime.cover ?? anime.imageUrl ?? undefined}

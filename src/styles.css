@@ -560,6 +560,78 @@
   animation-duration: 0s;
 }
 
+/* Troca lista/grade: linha larga e pôster alto têm proporções opostas, e o
+   snapshot padrão (largura 100%, altura auto) esticava texto e capa. A capa vira
+   um grupo próprio (proporção parecida nos dois lados) e morfa por cima; o card
+   só recorta o conteúdo no tamanho natural enquanto a caixa muda de forma. */
+:root.vt-view-switch [data-vt-card] {
+  view-transition-class: anime-card;
+}
+
+:root.vt-view-switch [data-vt-cover] {
+  view-transition-name: var(--vt-cover);
+  view-transition-class: anime-cover;
+}
+
+/* Header sticky num grupo próprio: os cards em movimento passam por baixo dele,
+   e ele troca seco (a pílula do toggle já tem animação própria). */
+:root.vt-view-switch [data-vt-header] {
+  view-transition-name: site-header;
+}
+
+::view-transition-group(site-header),
+::view-transition-old(site-header),
+::view-transition-new(site-header) {
+  animation-duration: 0s;
+}
+
+/* Só os cards marcados como perto da tela (markCardsInViewport) animam; o resto
+   troca no snapshot root, fora da vista. */
+:root.vt-view-switch [data-vt-card]:not([data-vt-near]),
+:root.vt-view-switch [data-vt-card]:not([data-vt-near]) [data-vt-cover] {
+  view-transition-name: none !important;
+}
+
+::view-transition-group(.anime-card) {
+  overflow: clip;
+  border-radius: var(--radius-2xl);
+}
+
+::view-transition-old(.anime-card),
+::view-transition-new(.anime-card) {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: none;
+  object-position: left top;
+}
+
+::view-transition-old(.anime-card) {
+  animation: var(--motion-duration-fast) ease-in both view-transition-old-ranking;
+}
+
+::view-transition-new(.anime-card) {
+  animation: var(--motion-duration-base) var(--motion-out-soft) var(--motion-duration-fast) both
+    view-transition-new-ranking;
+}
+
+::view-transition-group(.anime-cover) {
+  overflow: clip;
+  border-radius: var(--radius-lg);
+}
+
+::view-transition-old(.anime-cover),
+::view-transition-new(.anime-cover) {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  object-position: center top;
+  animation-name: view-transition-old-ranking;
+}
+
+::view-transition-new(.anime-cover) {
+  animation-name: view-transition-new-ranking;
+}
+
 /* Troca MAL/Meu gosto: quase nenhum card existe nos dois modos, então em vez de
    cada card fazer fade solto (com pódio e linhas da tierlist pulando no root) o
    ranking inteiro desliza na direção da pílula do toggle. */
