@@ -330,7 +330,7 @@ function SummaryList({ label, names }: { label: string; names: string[] }) {
           {label} <span className="text-muted-foreground">({names.length})</span>
         </span>
         <ChevronDown
-          className="h-4 w-4 transition-transform group-open:rotate-180"
+          className="h-4 w-4 transition-transform duration-base ease-out-soft group-open:rotate-180 motion-reduce:transition-none"
           aria-hidden="true"
         />
       </summary>

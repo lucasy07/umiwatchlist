@@ -60,11 +60,7 @@ export function DraggableCover({
       title={anime.name}
       className={`group relative focus-ring w-20 ${animateIn ? "animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-both duration-slow motion-reduce:animate-none" : ""} appearance-none border-0 bg-transparent p-0 text-left touch-none ${
         isDragging ? "opacity-40" : ""
-      } ${
-        highlighted
-          ? "ring-2 ring-primary shadow-[var(--shadow-elegant)] animate-pulse motion-reduce:animate-none"
-          : ""
-      }`}
+      } ${highlighted ? "card-flash ring-2 ring-primary shadow-[var(--shadow-elegant)]" : ""}`}
       style={{
         ...(animateIn ? { animationDelay: `${Math.min(idx, 12) * 30}ms` } : {}),
         transform: CSS.Transform.toString(transform),

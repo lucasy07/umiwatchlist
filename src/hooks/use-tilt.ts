@@ -7,9 +7,9 @@ import { useCallback, useRef } from "react";
  * - Uses inline style transform + will-change during hover only.
  */
 export function useTilt(options?: { max?: number; perspective?: number; scale?: number }) {
-  const max = options?.max ?? 9;
+  const max = options?.max ?? 4;
   const perspective = options?.perspective ?? 800;
-  const scale = options?.scale ?? 1.02;
+  const scale = options?.scale ?? 1.01;
   const ref = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
 

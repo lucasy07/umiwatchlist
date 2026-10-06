@@ -242,7 +242,7 @@ export function RankingList({
                 aria-expanded={isOpen}
               >
                 <ChevronDown
-                  className={`h-5 w-5 transition-transform duration-base ease-spring motion-reduce:transition-none ${isOpen ? "rotate-180" : ""}`}
+                  className={`h-5 w-5 transition-transform duration-base ease-out-soft motion-reduce:transition-none ${isOpen ? "rotate-180" : ""}`}
                 />
               </Button>
             </div>

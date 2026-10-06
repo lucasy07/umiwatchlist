@@ -723,7 +723,7 @@ function BarRow({
       <div className="min-w-0 flex-1">
         <div className="h-2.5 w-full overflow-hidden rounded-full bg-foreground/5">
           <div
-            className={`stat-bar-grow h-full rounded-full transition-[width] duration-emphasis ease-out-soft motion-reduce:transition-none ${barClass}`}
+            className={`stat-bar-grow h-full rounded-full ${barClass}`}
             style={{
               width: `${max > 0 ? (value / max) * 100 : 0}%`,
               animationDelay: `${index * 40}ms`,
