@@ -21,8 +21,14 @@ type JikanAnime = {
   images?: { jpg?: { small_image_url?: string; large_image_url?: string } };
 };
 
+/** Sem resposta nesse prazo, a busca cai para o AniList em vez de ficar em "Buscando…". */
+const JIKAN_SEARCH_TIMEOUT_MS = 8_000;
+
 async function searchJikan(q: string, signal: AbortSignal): Promise<JikanAnime[]> {
-  return searchJikanAnime(q, 5, { signal, priority: "interactive" });
+  return searchJikanAnime(q, 5, {
+    signal: AbortSignal.any([signal, AbortSignal.timeout(JIKAN_SEARCH_TIMEOUT_MS)]),
+    priority: "interactive",
+  });
 }
 
 type AniListMedia = {
