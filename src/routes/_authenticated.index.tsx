@@ -116,6 +116,7 @@ import { runMigrations } from "@/lib/migrations";
 import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SegmentedToggle } from "@/components/SegmentedToggle";
+import { captureScrollAnchor, markCardsInViewport } from "@/lib/scroll-anchor";
 import { withViewTransition } from "@/lib/view-transition";
 import {
   classifyChain,
@@ -171,6 +172,7 @@ function Index() {
   const [search, setSearch] = useState("");
   const [hasSearchText, setHasSearchText] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
   function clearSearch() {
     if (searchInputRef.current) searchInputRef.current.value = "";
     setHasSearchText(false);
@@ -331,7 +333,8 @@ function Index() {
   }, [scoreMode, viewMode, draggingAnimeId]);
 
   // Trocar lista/grade: os cards têm o mesmo viewTransitionName nas duas visualizações,
-  // então cada um desliza e muda de tamanho até a nova posição. Trocar MAL/Meu gosto
+  // então cada um desliza e muda de tamanho até a nova posição; a capa morfa à parte,
+  // o card revela o conteúdo sem esticar e o header fica por cima (styles.css). Trocar MAL/Meu gosto
   // quase não compartilha cards (MAL mostra não assistidos por padrão, Meu gosto só
   // assistidos), então o ranking desliza inteiro na direção do toggle (styles.css).
   function changeRankingMode(patch: { scoreMode?: "mal" | "gosto"; viewMode?: "list" | "grid" }) {
@@ -348,6 +351,23 @@ function Index() {
       const rootClass = `vt-mode-to-${patch.scoreMode}`;
       document.documentElement.classList.remove("vt-mode-to-mal", "vt-mode-to-gosto");
       withViewTransition(apply, { rootClass });
+      return;
+    }
+    if (patch.viewMode && patch.viewMode !== viewMode) {
+      // Lista e grade têm alturas bem diferentes: sem âncora, o mesmo scrollY cai em outro
+      // trecho do ranking e os cards visíveis saem voando. Mantém o primeiro card no lugar.
+      // Só os cards na tela antes ou depois da troca ganham nome (styles.css).
+      const restoreScroll = captureScrollAnchor(
+        headerRef.current?.getBoundingClientRect().bottom ?? 0,
+      );
+      const visibleBefore = markCardsInViewport();
+      withViewTransition(apply, {
+        rootClass: "vt-view-switch",
+        afterUpdate: () => {
+          restoreScroll?.();
+          markCardsInViewport(visibleBefore);
+        },
+      });
       return;
     }
     withViewTransition(apply);
@@ -1454,7 +1474,11 @@ function Index() {
       />
 
       {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-border/60 bg-background/70 backdrop-blur-xl">
+      <header
+        ref={headerRef}
+        data-vt-header
+        className="sticky top-0 z-30 border-b border-border/60 bg-background/70 backdrop-blur-xl"
+      >
         <div className="mx-auto flex h-[72px] sm:h-[88px] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
           <h1 className="min-w-0 shrink-0">
             <span className="sr-only">Umi Watchlist</span>

@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import {
   Award,
   CalendarClock,
@@ -88,7 +89,15 @@ export function RankingGrid({
                 title={anime.name}
                 className="block w-full cursor-pointer appearance-none border-0 bg-transparent p-0 text-left outline-none"
               >
-                <div className="relative aspect-[2/3] w-full overflow-hidden bg-card-elevated">
+                <div
+                  data-vt-cover
+                  className="relative aspect-[2/3] w-full overflow-hidden bg-card-elevated"
+                  style={
+                    enableItemViewTransitions
+                      ? ({ "--vt-cover": `anime-cover-${anime.id}` } as CSSProperties)
+                      : undefined
+                  }
+                >
                   {anime.cover || anime.imageUrl ? (
                     <img
                       src={anime.cover ?? anime.imageUrl ?? undefined}
